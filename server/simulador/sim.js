@@ -483,6 +483,11 @@
       if (!this.rule.activo || this.flags.serverDown) return;
       let llegadas;
       try { llegadas = this.obtener(this.rule.parada, now).llegadas; } catch { return; }
+      this.evaluarAviso(llegadas, now);
+    },
+
+    // server/avisos.py: evaluar(); `this` es Demo o Live
+    evaluarAviso(llegadas, now) {
       const ahora = now / 1000;
       for (const bus of llegadas) {
         if (!bus.tiempo_real || bus.llega_a == null) continue;
@@ -502,7 +507,7 @@
 
     async aviso() {
       await new Promise(r => setTimeout(r, 40));
-      if (this.flags.serverDown) return { code: -1 };
+      if (this.flags?.serverDown) return { code: -1 };
       const now = Clock.now();
       const v = this.avisos.filter(a => now - a.ts < 90000);
       if (!v.length) return { code: 204 };
@@ -513,11 +518,107 @@
     reproducir(_ruta, doc) { Sound.say(doc.texto || 'Sal ya'); },
   };
 
+  // ========================================================== EMT EN DIRECTO
+  // Demo pública: llegadas reales de la EMT a través de un intermediario
+  // (proxy-demo/, Cloudflare Worker con caché de 20 s) y tiempo real de
+  // Open-Meteo. Misma normalización y mismos avisos que server/app.py.
+  const PROXY = 'https://emt-demo-proxy.PENDIENTE.workers.dev';
+  const PARADAS_LIVE = [708, 1676, 2080];
+
+  function iconoWmo(c) {
+    c = Number(c);
+    if (!Number.isInteger(c)) return '';
+    if (c === 0) return 'despejado';
+    if (c === 1 || c === 2) return 'parcial';
+    if (c === 3) return 'nublado';
+    if (c === 45 || c === 48) return 'niebla';
+    if ((c >= 51 && c <= 67) || (c >= 80 && c <= 82)) return 'lluvia';
+    if ((c >= 71 && c <= 77) || c === 85 || c === 86) return 'nieve';
+    if (c === 95 || c === 96 || c === 99) return 'tormenta';
+    return '';
+  }
+
+  function leerSae(xml) {
+    const doc = new DOMParser().parseFromString(xml, 'text/xml');
+    if (!doc.querySelector('estimacion')) throw new Error('Respuesta inesperada');
+    const buses = []; let error = null;
+    for (const b of doc.querySelectorAll('bus')) {
+      const t = (n) => (b.querySelector(n)?.textContent || '').trim();
+      const linea = t('linea'), minutos = t('minutos') || t('horaLlegada'), err = t('error');
+      if (err && !linea) { error = err; continue; }
+      if (linea && minutos && !err) buses.push({ linea, destino: t('destino'), minutos });
+    }
+    return buses.length ? { buses } : { buses: [], error: error || 'SENSE ESTIMACIONS' };
+  }
+
+  const Live = {
+    name: 'EMT en directo',
+    cache: {}, clima: { temp: '-- C', lluvia: '--%', icono: '', noche: false }, climaTs: 0,
+    avisos: [], anunciados: {}, lastRuleCheck: 0,
+    rule: Demo.rule,
+
+    async disponible() {
+      if (PROXY.includes('PENDIENTE')) return false;
+      const r = await http(`${PROXY}/salud`, 2500);
+      return r.code === 200;
+    },
+    async obtener(parada, now) {
+      const c = this.cache[parada];
+      if (c && now - c.ts < 15000) return { ...c, error: null };
+      try {
+        const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), 5000);
+        const r = await fetch(`${PROXY}/sae/${parada}`, { cache: 'no-store', signal: ctl.signal });
+        clearTimeout(to);
+        if (!r.ok) throw new Error(`EMT ${r.status}`);
+        const d = Demo.normalizar(leerSae(await r.text()), now);
+        this.cache[parada] = { ts: now, ...d };
+        return { ...this.cache[parada], error: null };
+      } catch (e) {
+        if (c && now - c.ts < 300000) return { ...c, error: String(e) };
+        throw e;
+      }
+    },
+    async actualizarClima(now) {
+      if (now - this.climaTs < 600000) return;
+      this.climaTs = now - 540000; // si falla, reintenta en 1 min
+      try {
+        const d = await fetch('https://api.open-meteo.com/v1/forecast?latitude=39.4697&longitude=-0.3774&current_weather=true&daily=precipitation_probability_max&timezone=Europe%2FMadrid').then(r => r.json());
+        const a = d.current_weather;
+        this.clima = { temp: `${Math.floor(Number(a.temperature) + 0.5)} C`, lluvia: `${parseInt(d.daily.precipitation_probability_max[0], 10)}%`,
+          icono: iconoWmo(a.weathercode), noche: a.is_day === 0 };
+        this.climaTs = now;
+      } catch { /* se mantiene el último valor */ }
+    },
+    async parada(id) {
+      const now = Clock.now();
+      await this.actualizarClima(now);
+      const base = { parada: id, clima: this.clima.temp, prob_lluvia: this.clima.lluvia, icono_clima: this.clima.icono, noche: this.clima.noche };
+      try {
+        const d = await this.obtener(id, now);
+        return { code: 200, json: { success: true, ...base, llegadas: d.llegadas, avisos: d.avisos,
+          servidor_ts: Math.floor(now / 1000), edad_dato_s: Math.floor((now - d.ts) / 1000), obsoleto: d.error !== null } };
+      } catch {
+        return { code: 502, json: { success: false, ...base, error: 'EMT no disponible', llegadas: [] } };
+      }
+    },
+    async tick(now) {
+      if (now - this.lastRuleCheck < 10000) return;
+      this.lastRuleCheck = now;
+      this.avisos = this.avisos.filter(a => now - a.ts < 90000);
+      if (!this.rule.activo || !PARADAS_LIVE.includes(this.rule.parada)) return;
+      let llegadas;
+      try { llegadas = (await this.obtener(this.rule.parada, now)).llegadas; } catch { return; }
+      Demo.evaluarAviso.call(this, llegadas, now);
+    },
+    aviso() { return Demo.aviso.call(this); },
+    reproducir(_ruta, doc) { Sound.say(doc.texto || 'Sal ya'); },
+  };
+
   // ==================================================================== UI
   const $ = (id) => document.getElementById(id);
   const net = { backend: Demo, wifiDown: false, wifiUp() { return !this.wifiDown; } };
   const device = new Device($('tft'), net);
-  let realDisponible = false;
+  let realDisponible = false, liveDisponible = false;
 
   function setParadas(list) {
     device.paradas = list; device.paradaActual = 0;
@@ -527,15 +628,16 @@
   }
 
   async function setMode(mode) {
-    const real = mode === 'real' && realDisponible;
-    net.backend = real ? ServerBackend : Demo;
-    document.body.dataset.mode = real ? 'real' : 'demo';
-    $('modeDemo').checked = !real; $('modeReal').checked = real;
-    if (real) {
-      Clock.setSpeed(1); syncSpeed();
+    if (mode === 'real' && !realDisponible) mode = 'demo';
+    if (mode === 'live' && !liveDisponible) mode = 'demo';
+    net.backend = mode === 'real' ? ServerBackend : mode === 'live' ? Live : Demo;
+    document.body.dataset.mode = mode;
+    $('modeDemo').checked = mode === 'demo'; $('modeLive').checked = mode === 'live'; $('modeReal').checked = mode === 'real';
+    if (mode !== 'demo') { Clock.setSpeed(1); Clock.base = Date.now(); Clock.realBase = performance.now(); syncSpeed(); }
+    if (mode === 'real') {
       const r = await http('/api/config', 3000);
       setParadas(r.json?.paradas?.length ? r.json.paradas : PARADAS_DEMO);
-    } else setParadas(PARADAS_DEMO);
+    } else setParadas(mode === 'live' ? PARADAS_LIVE : PARADAS_DEMO);
     $('stSource').textContent = net.backend.name;
     log(`Fuente de datos: ${net.backend.name}`);
     device.reset();
@@ -644,6 +746,7 @@
   // Bucle principal
   function frame() {
     if (net.backend === Demo) Demo.tick(Clock.now());
+    else if (net.backend === Live) Live.tick(Clock.now());
     device.tick();
     $('simClock').textContent = hhmm(Clock.now(), true);
     $('stWifi').textContent = device.state === 'boot' ? 'conectando' : device.wifi ? 'conectado' : 'sin conexión';
@@ -658,8 +761,10 @@
   (async () => {
     const r = await http('/api/config', 1500);
     realDisponible = r.code === 200 && Array.isArray(r.json?.paradas);
+    liveDisponible = !realDisponible && await Live.disponible();
     $('modeReal').disabled = !realDisponible;
+    $('modeLive').disabled = !liveDisponible;
     $('realNote').hidden = realDisponible;
-    await setMode(realDisponible ? 'real' : 'demo');
+    await setMode(realDisponible ? 'real' : liveDisponible ? 'live' : 'demo');
   })();
 })();

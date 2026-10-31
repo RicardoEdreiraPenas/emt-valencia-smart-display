@@ -52,11 +52,13 @@
     <section>
       <h2>Fuente de datos</h2>
       <div class="seg" role="radiogroup" aria-label="Fuente de datos">
+        <label><input type="radio" name="mode" id="modeLive" value="live" disabled><span>EMT en directo</span></label>
         <label><input type="radio" name="mode" id="modeDemo" value="demo" checked><span>Demo simulada</span></label>
-        <label><input type="radio" name="mode" id="modeReal" value="real" disabled><span>Servidor real</span></label>
+        <label><input type="radio" name="mode" id="modeReal" value="real" disabled><span>Tu servidor</span></label>
       </div>
-      <p class="hint" id="realNote">El modo real se activa al abrir el simulador desde tu servidor: <code>http://&lt;ip-del-servidor&gt;:5000/simulador/</code>. Así usa tu configuración y los datos reales de la EMT, igual que el ESP32.</p>
+      <p class="hint" id="realNote">"Tu servidor" se activa al abrir el simulador desde tu servidor: <code>http://&lt;ip-del-servidor&gt;:5000/simulador/</code>. Así usa tu configuración y los datos reales de la EMT, igual que el ESP32.</p>
       <p class="hint real-only">Conectado a tu servidor: las paradas, las llegadas y los avisos son reales.</p>
+      <p class="hint live-only">Llegadas reales de la EMT en tres paradas del centro de València (708, 1676 y 2080), con el tiempo real de Open-Meteo. Pasan por un intermediario con caché de 20 s para no cargar a la EMT.</p>
     </section>
 
     <section>
@@ -105,14 +107,14 @@
       <p class="hint">El servidor traduce el código del tiempo de Open-Meteo a uno de estos siete iconos; de noche, el sol pasa a luna.</p>
     </section>
 
-    <section class="demo-only">
+    <section class="not-real">
       <h2>Aviso de salida</h2>
       <div class="fields">
         <label for="ruleStop">Parada<select id="ruleStop"></select></label>
         <label for="ruleWalk">Minutos andando<input type="number" id="ruleWalk" min="0" max="30" value="5"></label>
         <label class="check" for="ruleOn"><input type="checkbox" id="ruleOn" checked>Avisos activos</label>
       </div>
-      <p class="hint">Igual que <code>server/avisos.py</code>: suena cuando llegada − minutos andando cae entre −30 s y +60 s, una sola vez por autobús. En la demo no se aplican la franja horaria ni el silencio nocturno.</p>
+      <p class="hint">Igual que <code>server/avisos.py</code>: suena cuando llegada − minutos andando cae entre −30 s y +60 s, una sola vez por autobús. Aquí no se aplican la franja horaria ni el silencio nocturno.</p>
     </section>
 
     <section>
@@ -122,7 +124,7 @@
         <button class="btn quiet" id="testVoice" type="button">Probar voz</button>
         <label for="vol">Volumen <output id="volOut">0.6</output><input type="range" id="vol" min="0" max="1" step="0.1" value="0.6"></label>
       </div>
-      <p class="hint demo-only">En la demo la voz es la del navegador; en el aparato real la genera Piper en el servidor.</p>
+      <p class="hint not-real">En el navegador la voz es la del propio navegador; en el aparato la genera Piper en el servidor.</p>
     </section>
 
     <section class="log">

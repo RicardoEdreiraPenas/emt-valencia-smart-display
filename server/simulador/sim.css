@@ -123,8 +123,10 @@ input[type="range"] { accent-color: var(--accent); }
 .log time { color: var(--muted); flex: none; font-variant-numeric: tabular-nums; }
 .log li.bad { color: var(--accent); } .log li.good { color: var(--ok); }
 
-body[data-mode="real"] .demo-only { display: none; }
-body[data-mode="demo"] .real-only { display: none; }
+body:not([data-mode="demo"]) .demo-only { display: none; }
+body:not([data-mode="real"]) .real-only { display: none; }
+body:not([data-mode="live"]) .live-only { display: none; }
+body[data-mode="real"] .not-real { display: none; }
 
 @media (prefers-reduced-motion: reduce) {
   #ripple.on, #speaker.playing i { animation: none; }

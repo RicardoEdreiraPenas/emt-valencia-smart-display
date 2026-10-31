@@ -1,0 +1,4 @@
+name = "emt-demo-proxy"
+main = "src/index.js"
+compatibility_date = "2026-10-15"
+workers_dev = true
