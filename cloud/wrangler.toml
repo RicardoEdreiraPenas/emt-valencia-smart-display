@@ -1,0 +1,38 @@
+# Servidor del EMT Smart Display en Cloudflare Workers (opción B, sin placa).
+# Guía: ../docs/CLOUDFLARE.md
+name = "emt-smart-display"
+main = "src/index.js"
+compatibility_date = "2026-10-15"
+workers_dev = true
+
+# Web y gemelo digital (npm run preparar los copia aquí)
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = ["/", "/index.html", "/api/*", "/entrar", "/salir"]
+
+# Voz de los avisos (Workers AI, Deepgram Aura 2 en español).
+# Sin esto, el aviso suena con un tono de dos notas.
+[ai]
+binding = "AI"
+
+[vars]
+# Paradas que muestra la pantalla, en orden (las de config.h del ESP32)
+PARADAS = "708,1676,2080,1619,697"
+# Ubicación para el tiempo (Open-Meteo): "latitud,longitud"
+CLIMA = "39.4697,-0.3774"
+# Franja en la que nunca suena nada ("" = sin silencio)
+SILENCIO = "23:00-07:00"
+# Voz: aquila, alvaro, carina, celeste, diana, estrella, javier, nestor, selena, sirio
+VOZ = "aquila"
+# Avisos de salida, como REGLAS en server/config.py (dias: 0 = lunes … 6 = domingo;
+# lineas: null = todas, o ["19", "93"])
+REGLAS = '''
+[
+  {"parada": 708, "andando_min": 5, "lineas": null,
+   "dias": [0, 1, 2, 3, 4], "desde": "07:30", "hasta": "09:00"}
+]
+'''
+
+# La clave NO va aquí: es un secreto.
+#   npx wrangler secret put API_TOKEN

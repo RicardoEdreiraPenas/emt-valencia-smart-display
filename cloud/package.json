@@ -1,0 +1,11 @@
+{
+  "name": "emt-smart-display-cloud",
+  "private": true,
+  "type": "module",
+  "description": "Servidor del EMT Smart Display en Cloudflare Workers (opción B, sin placa)",
+  "scripts": {
+    "preparar": "node scripts/preparar.mjs",
+    "test": "node --test test/nucleo.test.mjs test/paridad.test.mjs test/servidor.test.mjs",
+    "desplegar": "npm run preparar && npx -y wrangler@4 deploy"
+  }
+}
