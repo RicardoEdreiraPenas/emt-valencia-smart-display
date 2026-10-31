@@ -235,3 +235,25 @@ test('configuración: listas, JSON y valores por defecto', () => {
   assert.equal(c.silencio, null);
   assert.deepEqual(leerConfig({ PARADAS: '[1,2]' }).silencio, ['23:00', '07:00']);
 });
+
+test('EMT "temporalmente no disponible" (HTML sin buses): se sigue con el último dato bueno', async () => {
+  const noDisp = readFileSync(new URL('sae_no_disponible.xml', fixtures));
+  let malo = false;
+  const { pedir, reloj } = montar({ xml: () => (malo ? noDisp : XML_708) });
+  await pedir('/api/parada/708');
+  malo = true;
+  reloj.t += 20;
+  const d = await (await pedir('/api/parada/708')).json();
+  assert.equal(d.obsoleto, true);
+  assert.equal(d.llegadas[0].linea, '19');
+  reloj.t += 300;
+  assert.equal((await pedir('/api/parada/708')).status, 502);
+});
+
+test('"sin servicio" no es un error', async () => {
+  const sin = readFileSync(new URL('sae_sin_servicio.xml', fixtures));
+  const { pedir } = montar({ xml: () => sin });
+  const d = await (await pedir('/api/parada/2080')).json();
+  assert.equal(d.success, true);
+  assert.deepEqual(d.avisos, ['SENSE ESTIMACIONS']);
+});

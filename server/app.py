@@ -210,7 +210,13 @@ def consultar_sae(stop_id):
         timeout=SAE_TIMEOUT,
     )
     r.raise_for_status()
-    return parsear_sae(r.content)   # bytes: ET respeta el encoding del XML
+    llegadas, avisos = parsear_sae(r.content)   # bytes: ET respeta el encoding del XML
+    # "Temporalment no disponible": la EMT contesta con un aviso en HTML y sin
+    # autobuses. Es un fallo suyo, no "sin servicio": se trata como error para
+    # seguir mostrando el último dato bueno.
+    if not llegadas and any("<" in a for a in avisos):
+        raise RuntimeError("EMT: no disponible")
+    return llegadas, avisos
 
 
 def obtener_llegadas(stop_id):

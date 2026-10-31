@@ -31,7 +31,8 @@ const MAX_STALE_S = 300;      // tras 5 min sin datos frescos, se declara caído
 const CLIMA_CACHE_S = 600;
 const CLIMA_REINTENTO_S = 60;
 const COOKIE = 'emt_clave';
-const UA = 'EMTSmartDisplay/1.0 (+https://github.com/RicardoEdreiraPenas/emt-valencia-smart-display)';
+// Se identifica igual que el intermediario de la demo (formato estándar de los bots)
+const UA = 'Mozilla/5.0 (compatible; EMTSmartDisplay/1.0; +https://github.com/RicardoEdreiraPenas/emt-valencia-smart-display)';
 const MODELO_VOZ = '@cf/deepgram/aura-2-es';
 
 // --- Configuración (wrangler.toml -> [vars]) ------------------------------------
@@ -172,7 +173,12 @@ export function crearServidor({ fetchFn = (...a) => fetch(...a), almacen = new A
       const cod = (/encoding=["']([\w-]+)["']/i.exec(cabeza) || [])[1] || 'utf-8';
       let xml;
       try { xml = new TextDecoder(cod).decode(bytes); } catch { xml = new TextDecoder().decode(bytes); }
-      return parsearSae(xml, reloj());
+      const r2 = parsearSae(xml, reloj());
+      // "Temporalment no disponible": la EMT contesta con un aviso en HTML y sin
+      // autobuses. Es un fallo suyo, no "sin servicio": se trata como error para
+      // seguir mostrando el último dato bueno.
+      if (!r2.llegadas.length && r2.avisos.some((a) => a.includes('<'))) throw new Error('EMT: no disponible');
+      return r2;
     } finally {
       clearTimeout(to);
     }

@@ -4737,6 +4737,42 @@
   {
    "ahora": 1793602800.0,
    "avisos": [
+    "<center>Temporalment no disponible des del pla.<br/>Consulta les estimacions d'arribada des de la <a href=\"/ciudadano/index.php?lang=ca\">Home</a>.<br/></center>"
+   ],
+   "fixture": "sae_no_disponible.xml",
+   "instante": "lunes_0800",
+   "llegadas": []
+  },
+  {
+   "ahora": 1793659830.0,
+   "avisos": [
+    "<center>Temporalment no disponible des del pla.<br/>Consulta les estimacions d'arribada des de la <a href=\"/ciudadano/index.php?lang=ca\">Home</a>.<br/></center>"
+   ],
+   "fixture": "sae_no_disponible.xml",
+   "instante": "noche_2350",
+   "llegadas": []
+  },
+  {
+   "ahora": 1784127612.0,
+   "avisos": [
+    "<center>Temporalment no disponible des del pla.<br/>Consulta les estimacions d'arribada des de la <a href=\"/ciudadano/index.php?lang=ca\">Home</a>.<br/></center>"
+   ],
+   "fixture": "sae_no_disponible.xml",
+   "instante": "verano_1700",
+   "llegadas": []
+  },
+  {
+   "ahora": 1792884600.0,
+   "avisos": [
+    "<center>Temporalment no disponible des del pla.<br/>Consulta les estimacions d'arribada des de la <a href=\"/ciudadano/index.php?lang=ca\">Home</a>.<br/></center>"
+   ],
+   "fixture": "sae_no_disponible.xml",
+   "instante": "cambio_hora",
+   "llegadas": []
+  },
+  {
+   "ahora": 1793602800.0,
+   "avisos": [
     "SENSE ESTIMACIONS"
    ],
    "fixture": "sae_parcial_sin_servicio.xml",

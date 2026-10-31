@@ -86,3 +86,33 @@ def test_linea_desviada_visible_entre_las_3_primeras():
     llegadas, _ = app.parsear_sae(f"<estimacion><solo_parada>{buses}</solo_parada></estimacion>".encode(), AHORA)
     assert [b["linea"] for b in llegadas] == ["7", "27", "81", "7", "27"]
     assert llegadas[2]["desviada"] is True
+
+
+class _Resp:
+    def __init__(self, contenido):
+        self.content = contenido
+
+    def raise_for_status(self):
+        pass
+
+
+def test_emt_temporalmente_no_disponible_es_un_error(monkeypatch):
+    """La EMT a veces contesta "Temporalment no disponible" (HTML, sin buses):
+    no es "sin servicio", así que se sigue mostrando el último dato bueno."""
+    no_disp = (FIX / "sae_no_disponible.xml").read_bytes()
+    bueno = (FIX / "sae_708.xml").read_bytes()
+    respuestas = [bueno, no_disp]
+    monkeypatch.setattr(app.session, "get", lambda *a, **k: _Resp(respuestas.pop(0)))
+    app._cache_paradas.clear()
+    llegadas, _, _, error = app.obtener_llegadas(708)
+    assert llegadas and error is None
+    app._cache_paradas[708]["ts"] -= 60          # caducada: vuelve a preguntar
+    llegadas2, _, _, error = app.obtener_llegadas(708)
+    assert llegadas2 == llegadas and "no disponible" in error
+    app._cache_paradas.clear()
+
+
+def test_sin_servicio_no_es_un_error(monkeypatch):
+    monkeypatch.setattr(app.session, "get",
+                        lambda *a, **k: _Resp((FIX / "sae_sin_servicio.xml").read_bytes()))
+    assert app.consultar_sae(2080) == ([], ["SENSE ESTIMACIONS"])
