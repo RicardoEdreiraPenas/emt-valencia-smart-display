@@ -44,7 +44,7 @@ El sistema tiene tres piezas: un **ESP32** con pantalla de 2,8" montado en una c
 
 ## Gemelo digital
 
-<p align="center"><img src="docs/img/gemelo.png" alt="Gemelo digital: la pantalla simulada con un aviso de salida y el panel de escenarios" width="100%"></p>
+<p align="center"><img src="docs/img/gemelo.png" alt="Gemelo digital: la pantalla simulada con lluvia y una línea desviada, junto al panel de escenarios" width="100%"></p>
 
 Un simulador en el navegador para probar el sistema **sin montar el hardware**. La pantalla se dibuja con el mismo código que el firmware, traducido línea a línea: coordenadas, colores, textos, refrescos cada 20 s, banner de 60 s y validaciones. El táctil funciona haciendo clic a la izquierda o a la derecha.
 
