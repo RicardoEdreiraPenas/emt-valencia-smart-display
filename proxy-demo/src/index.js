@@ -8,13 +8,13 @@
  *
  * Límites para no cargar a la EMT ni convertirse en un proxy abierto:
  *   - solo las paradas de la demo (centro de València)
- *   - caché de 20 s por parada: como mucho 3 consultas a la EMT cada 20 s,
+ *   - caché de 20 s por parada: como mucho 5 consultas a la EMT cada 20 s,
  *     haya los visitantes que haya
  *   - solo GET, sin reenviar parámetros ni cabeceras del visitante
  *   - CORS solo para la demo y para pruebas en local
  */
 
-const PARADAS = new Set([708, 1676, 2080]);
+const PARADAS = new Set([708, 1676, 2080, 1619, 697]);
 const SAE = 'https://www.emtvalencia.es/EMT/mapfunctions/MapUtilsPetitions.php';
 const CACHE_S = 20;
 const ORIGENES = new Set([
