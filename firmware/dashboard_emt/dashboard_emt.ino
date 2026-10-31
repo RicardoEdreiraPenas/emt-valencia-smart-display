@@ -59,6 +59,10 @@ XPT2046_Touchscreen ts(TOUCH_CS);
 #define COLOR_GREEN      tft.color565(48, 209, 88)
 #define COLOR_ORANGE     tft.color565(255, 159, 10)
 #define COLOR_BLUE_RAIN  tft.color565(90, 200, 250)
+#define COLOR_SUN        tft.color565(255, 214, 10)
+#define COLOR_CLOUD      tft.color565(199, 199, 204)
+#define COLOR_CLOUD_DARK tft.color565(142, 142, 147)
+#define COLOR_MOON       tft.color565(229, 229, 234)
 
 // --- TEMPORIZADORES ---
 unsigned long lastBusUpdate = 0;
@@ -332,6 +336,63 @@ String sinAcentos(const String& in) {
   return out;
 }
 
+// --- Iconos del tiempo: 20x20 px en torno a (110, 17), solo con primitivas GFX
+void iconoSol(int x, int y, int r) {
+  tft.fillCircle(x, y, r, COLOR_SUN);
+  int a = r + 2, b = r + 4, d = (int)lround(a * 0.7), e = (int)lround(b * 0.7);
+  const int8_t ejes[4][2] = {{1, 0}, {0, 1}, {-1, 0}, {0, -1}};
+  const int8_t diag[4][2] = {{1, 1}, {-1, 1}, {-1, -1}, {1, -1}};
+  for (int i = 0; i < 4; i++) {
+    tft.drawLine(x + ejes[i][0] * a, y + ejes[i][1] * a, x + ejes[i][0] * b, y + ejes[i][1] * b, COLOR_SUN);
+    tft.drawLine(x + diag[i][0] * d, y + diag[i][1] * d, x + diag[i][0] * e, y + diag[i][1] * e, COLOR_SUN);
+  }
+}
+
+void iconoLuna(int x, int y, int r) {
+  tft.fillCircle(x, y, r, COLOR_MOON);
+  tft.fillCircle(x + 3, y - 3, r - 1, COLOR_BG);
+}
+
+void iconoNube(int x, int y, uint16_t c) {
+  tft.fillCircle(x - 4, y, 4, c);
+  tft.fillCircle(x + 1, y - 3, 5, c);
+  tft.fillCircle(x + 6, y + 1, 3, c);
+  tft.fillRoundRect(x - 8, y, 17, 5, 2, c);
+}
+
+void drawIconoClima(const char* icono, bool noche) {
+  const int X = 110, Y = 17;
+  tft.fillRect(98, 2, 26, 31, COLOR_BG);
+  if (!strcmp(icono, "despejado")) {
+    if (noche) iconoLuna(X, Y, 6); else iconoSol(X, Y, 5);
+  } else if (!strcmp(icono, "parcial")) {
+    if (noche) iconoLuna(X - 5, Y - 5, 5); else iconoSol(X - 5, Y - 5, 4);
+    iconoNube(X + 2, Y + 3, COLOR_CLOUD);
+  } else if (!strcmp(icono, "nublado")) {
+    iconoNube(X - 3, Y - 2, COLOR_CLOUD_DARK);
+    iconoNube(X + 2, Y + 3, COLOR_CLOUD);
+  } else if (!strcmp(icono, "niebla")) {
+    tft.fillRect(X - 9, Y - 5, 18, 2, COLOR_CLOUD);
+    tft.fillRect(X - 6, Y, 18, 2, COLOR_CLOUD);
+    tft.fillRect(X - 9, Y + 5, 18, 2, COLOR_CLOUD);
+  } else if (!strcmp(icono, "lluvia")) {
+    iconoNube(X, Y - 3, COLOR_CLOUD);
+    for (int dx = -6; dx <= 4; dx += 5) {
+      tft.drawLine(X + dx, Y + 5, X + dx - 2, Y + 9, COLOR_BLUE_RAIN);
+      tft.drawLine(X + dx + 1, Y + 5, X + dx - 1, Y + 9, COLOR_BLUE_RAIN);
+    }
+  } else if (!strcmp(icono, "nieve")) {
+    iconoNube(X, Y - 3, COLOR_CLOUD);
+    tft.fillCircle(X - 6, Y + 7, 1, ILI9341_WHITE);
+    tft.fillCircle(X, Y + 9, 1, ILI9341_WHITE);
+    tft.fillCircle(X + 6, Y + 7, 1, ILI9341_WHITE);
+  } else if (!strcmp(icono, "tormenta")) {
+    iconoNube(X, Y - 4, COLOR_CLOUD_DARK);
+    tft.fillTriangle(X + 1, Y + 1, X - 4, Y + 7, X, Y + 6, COLOR_SUN);
+    tft.fillTriangle(X, Y + 5, X + 4, Y + 5, X - 2, Y + 12, COLOR_SUN);
+  }
+}
+
 void drawSinWifi(bool cabeceraEntera) {
   if (avisoActivo()) return;
   tft.setFont(&FreeSansBold9pt7b);
@@ -342,7 +403,7 @@ void drawSinWifi(bool cabeceraEntera) {
     tft.print("EMT " + String(paradas[paradaActual]));
     drawClock();
   }
-  tft.fillRect(120, 0, 130, 35, COLOR_BG);
+  tft.fillRect(98, 0, 152, 35, COLOR_BG);   // tapa también el icono del tiempo
   tft.setTextColor(COLOR_RED);
   tft.setCursor(130, 24);
   tft.print("Sin WiFi");
@@ -400,6 +461,8 @@ void drawHeader(JsonDocument& doc) {
   tft.setTextColor(COLOR_BLUE_RAIN);
   tft.setCursor(195, 24);
   tft.print(doc["prob_lluvia"].as<String>());
+
+  drawIconoClima(doc["icono_clima"] | "", doc["noche"] | false);
 
   // Punto naranja si el servidor está sirviendo el último dato bueno
   if (doc["obsoleto"] | false) {

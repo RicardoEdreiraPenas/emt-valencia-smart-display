@@ -44,6 +44,7 @@
   const C = {
     BG: '#000000', CARD: '#1c1c1e', DIM: '#8e8e93', ACCENT: '#0a84ff', RED: '#ff453a',
     GREEN: '#30d158', ORANGE: '#ff9f0a', RAIN: '#5ac8fa', WHITE: '#ffffff', BLACK: '#000000',
+    SUN: '#ffd60a', CLOUD: '#c7c7cc', CLOUD_DARK: '#8e8e93', MOON: '#e5e5ea',
   };
   const FONT = 'bold 13.5px "Liberation Sans", "Helvetica Neue", Arial, Helvetica, sans-serif';
 
@@ -97,6 +98,58 @@
     }
     width(s) { const g = this.g; g.save(); g.font = FONT; const w = g.measureText(s).width; g.restore(); return w; }
 
+    // drawLine de 1 px como Adafruit GFX (Bresenham)
+    line(x0, y0, x1, y1, c) {
+      const dx = Math.abs(x1 - x0), sx = x0 < x1 ? 1 : -1, dy = -Math.abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
+      let err = dx + dy;
+      for (;;) { this.rect(x0, y0, 1, 1, c); if (x0 === x1 && y0 === y1) break; const e2 = 2 * err; if (e2 >= dy) { err += dy; x0 += sx; } if (e2 <= dx) { err += dx; y0 += sy; } }
+    }
+    tri(x0, y0, x1, y1, x2, y2, c) {
+      const g = this.g, k = this.k; g.fillStyle = c; g.beginPath();
+      g.moveTo(x0 * k, y0 * k); g.lineTo(x1 * k, y1 * k); g.lineTo(x2 * k, y2 * k); g.closePath(); g.fill();
+    }
+    // GFX fillCircle(x, y, r) ocupa de x-r a x+r inclusive
+    disc(x, y, r, c) { this.circle(x + 0.5, y + 0.5, r + 0.5, c); }
+
+    // ---- iconos del tiempo (20x20 en torno a x=110, y=17)
+    sol(x, y, r, c = C.SUN) {
+      this.disc(x, y, r, c);
+      const a = r + 2, b = r + 4, d = Math.round(a * 0.7), e = Math.round(b * 0.7);
+      for (const [p, q] of [[1, 0], [0, 1], [-1, 0], [0, -1]]) this.line(x + p * a, y + q * a, x + p * b, y + q * b, c);
+      for (const [p, q] of [[1, 1], [-1, 1], [-1, -1], [1, -1]]) this.line(x + p * d, y + q * d, x + p * e, y + q * e, c);
+    }
+    luna(x, y, r) { this.disc(x, y, r, C.MOON); this.disc(x + 3, y - 3, r - 1, C.BG); }
+    nube(x, y, c) {
+      this.disc(x - 4, y, 4, c); this.disc(x + 1, y - 3, 5, c); this.disc(x + 6, y + 1, 3, c);
+      this.rrect(x - 8, y, 17, 5, 2, c);
+    }
+    drawIconoClima(icono, noche) {
+      const X = 110, Y = 17;
+      this.rect(98, 2, 26, 31, C.BG);
+      switch (icono) {
+        case 'despejado': noche ? this.luna(X, Y, 6) : this.sol(X, Y, 5); break;
+        case 'parcial': noche ? this.luna(X - 5, Y - 5, 5) : this.sol(X - 5, Y - 5, 4); this.nube(X + 2, Y + 3, C.CLOUD); break;
+        case 'nublado': this.nube(X - 3, Y - 2, C.CLOUD_DARK); this.nube(X + 2, Y + 3, C.CLOUD); break;
+        case 'niebla':
+          for (const [dx, dy] of [[-9, -5], [-6, 0], [-9, 5]]) { this.rect(X + dx, Y + dy, 18, 2, C.CLOUD); }
+          break;
+        case 'lluvia':
+          this.nube(X, Y - 3, C.CLOUD);
+          for (const dx of [-6, -1, 4]) { this.line(X + dx, Y + 5, X + dx - 2, Y + 9, C.RAIN); this.line(X + dx + 1, Y + 5, X + dx - 1, Y + 9, C.RAIN); }
+          break;
+        case 'nieve':
+          this.nube(X, Y - 3, C.CLOUD);
+          for (const [dx, dy] of [[-6, 7], [0, 9], [6, 7]]) this.disc(X + dx, Y + dy, 1, C.WHITE);
+          break;
+        case 'tormenta':
+          this.nube(X, Y - 4, C.CLOUD_DARK);
+          this.tri(X + 1, Y + 1, X - 4, Y + 7, X, Y + 6, C.SUN);
+          this.tri(X, Y + 5, X + 4, Y + 5, X - 2, Y + 12, C.SUN);
+          break;
+        default: break;
+      }
+    }
+
     mensajeCentral(t, c) { this.rect(0, 0, 320, 240, C.BG); this.text(10, 110, t, c); }
     avisoActivo() { return this.avisoHasta !== 0 && Clock.now() < this.avisoHasta; }
 
@@ -108,7 +161,7 @@
         this.text(10, 24, 'EMT ' + this.paradas[this.paradaActual], C.WHITE);
         this.drawClock();
       }
-      this.rect(120, 0, 130, 35, C.BG); this.text(130, 24, 'Sin WiFi', C.RED);
+      this.rect(98, 0, 152, 35, C.BG); this.text(130, 24, 'Sin WiFi', C.RED);
     }
     drawLoading() {
       if (this.avisoActivo()) return;
@@ -129,6 +182,7 @@
       this.text(10, 24, 'EMT ' + parseInt(doc.parada, 10), C.WHITE);
       this.text(130, 24, String(doc.clima ?? ''), C.ACCENT);
       this.text(195, 24, String(doc.prob_lluvia ?? ''), C.RAIN);
+      this.drawIconoClima(String(doc.icono_clima || ''), !!doc.noche);
       if (doc.obsoleto) this.circle(244, 18, 3, C.ORANGE);
     }
     drawBody(doc) {
@@ -331,7 +385,7 @@
     cache: {},               // parada -> {ts, llegadas, avisos}
     rule: { parada: 708, andando: 5, activo: true },
     avisos: [], anunciados: {}, lastRuleCheck: 0,
-    clima: { temp: '17 C', lluvia: '20%' },
+    clima: { temp: '17 C', lluvia: '20%', icono: 'parcial', noche: false },
 
     // Lo que contestaría el SAE: lista de {linea, destino, minutos(texto)}
     sae(parada, now) {
@@ -411,12 +465,12 @@
       try {
         const d = this.obtener(id, now);
         return { code: 200, json: {
-          success: true, parada: id, clima: this.clima.temp, prob_lluvia: this.clima.lluvia,
+          success: true, parada: id, clima: this.clima.temp, prob_lluvia: this.clima.lluvia, icono_clima: this.clima.icono, noche: this.clima.noche,
           llegadas: d.llegadas, avisos: d.avisos, servidor_ts: Math.floor(now / 1000),
           edad_dato_s: Math.floor((now - d.ts) / 1000), obsoleto: d.error !== null,
         } };
       } catch {
-        return { code: 502, json: { success: false, parada: id, error: 'EMT no disponible', clima: this.clima.temp, prob_lluvia: this.clima.lluvia, llegadas: [] } };
+        return { code: 502, json: { success: false, parada: id, error: 'EMT no disponible', clima: this.clima.temp, prob_lluvia: this.clima.lluvia, icono_clima: this.clima.icono, noche: this.clima.noche, llegadas: [] } };
       }
     },
 
@@ -548,7 +602,7 @@
     const p = Demo.rule.parada; const [linea, destino] = RED_DEMO[p]?.[0] || [];
     if (!linea) return;
     Demo.extra.push({ parada: p, linea, destino, t: Clock.now() + (Demo.rule.andando * 60 + 50) * 1000 });
-    Demo.cache = {}; Demo.lastRuleCheck = 0;
+    Demo.cache = {}; Demo.lastRuleCheck = 0; device.lastBusUpdate = 0;
     log(`Escenario: la ${linea} se acerca a la parada ${p}; toca salir de casa`);
   });
   $('scReset').addEventListener('click', () => {
@@ -557,6 +611,16 @@
     for (const b of document.querySelectorAll('[aria-pressed]')) toggleBtn(b, false);
     log('Escenarios restablecidos'); device.lastBusUpdate = 0;
   });
+
+  // Tiempo meteorológico (demo)
+  const TEMPS = { despejado: ['24 C', '0%'], parcial: ['19 C', '20%'], nublado: ['16 C', '40%'], niebla: ['12 C', '10%'], lluvia: ['14 C', '90%'], nieve: ['1 C', '80%'], tormenta: ['21 C', '95%'] };
+  function aplicarClima() {
+    const ic = $('wxIcon').value; Demo.clima = { temp: TEMPS[ic][0], lluvia: TEMPS[ic][1], icono: ic, noche: $('wxNight').checked };
+    Demo.cache = {}; device.lastBusUpdate = 0;
+    log(`Escenario: tiempo ${ic}${Demo.clima.noche ? ' (noche)' : ''}`);
+  }
+  $('wxIcon').addEventListener('change', aplicarClima);
+  $('wxNight').addEventListener('change', aplicarClima);
 
   // Regla de aviso
   $('ruleStop').addEventListener('change', (e) => { Demo.rule.parada = Number(e.target.value); Demo.anunciados = {}; });

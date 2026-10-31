@@ -3,6 +3,17 @@ import React, { useState, useEffect, useRef } from 'react';
 // Vacío = mismo servidor que sirve la web (Flask en la Radxa). Sin CORS ni contenido mixto.
 const API_BASE = '';
 
+// Icono del tiempo que manda el servidor (código WMO de Open-Meteo ya traducido)
+const ICONOS_CLIMA = {
+  despejado: ['☀️', '🌙', 'Despejado'],
+  parcial: ['⛅', '☁️', 'Intervalos nubosos'],
+  nublado: ['☁️', '☁️', 'Nublado'],
+  niebla: ['🌫️', '🌫️', 'Niebla'],
+  lluvia: ['🌧️', '🌧️', 'Lluvia'],
+  nieve: ['🌨️', '🌨️', 'Nieve'],
+  tormenta: ['⛈️', '⛈️', 'Tormenta'],
+};
+
 export default function DashboardEMT() {
   const [paradas, setParadas] = useState([]);
   const [paradaIdx, setParadaIdx] = useState(0);
@@ -86,8 +97,13 @@ export default function DashboardEMT() {
           )}
         </span>
         <div className="flex space-x-4">
+          {ICONOS_CLIMA[datos.icono_clima] && (
+            <span role="img" aria-label={ICONOS_CLIMA[datos.icono_clima][2]} title={ICONOS_CLIMA[datos.icono_clima][2]}>
+              {ICONOS_CLIMA[datos.icono_clima][datos.noche ? 1 : 0]}
+            </span>
+          )}
           <span className="text-[#0a84ff]">{datos.clima}</span>
-          <span className="text-[#5ac8fa]">☔ {datos.prob_lluvia}</span>
+          <span className="text-[#5ac8fa]" title="Probabilidad de lluvia hoy">☔ {datos.prob_lluvia}</span>
         </div>
         <span>{hora}</span>
       </div>

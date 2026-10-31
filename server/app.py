@@ -73,7 +73,7 @@ session.headers.update(HEADERS)
 
 _lock = threading.Lock()
 _cache_paradas = {}   # stop_id -> {"ts": epoch, "llegadas": [...]}
-_cache_clima = {"ts": 0, "data": {"temp": "-- C", "lluvia": "--%"}}
+_cache_clima = {"ts": 0, "data": {"temp": "-- C", "lluvia": "--%", "icono": "", "noche": False}}
 
 
 # --- SAE (EMT) ---------------------------------------------------------------
@@ -239,6 +239,29 @@ def _redondear(x):
     return math.floor(float(x) + 0.5)
 
 
+def icono_wmo(codigo):
+    """Código WMO de Open-Meteo -> icono que dibuja la pantalla."""
+    try:
+        c = int(codigo)
+    except (TypeError, ValueError):
+        return ""
+    if c == 0:
+        return "despejado"
+    if c in (1, 2):
+        return "parcial"
+    if c == 3:
+        return "nublado"
+    if c in (45, 48):
+        return "niebla"
+    if 51 <= c <= 67 or 80 <= c <= 82:
+        return "lluvia"
+    if 71 <= c <= 77 or c in (85, 86):
+        return "nieve"
+    if c in (95, 96, 99):
+        return "tormenta"
+    return ""
+
+
 def obtener_clima():
     ahora = time.time()
     if ahora - _cache_clima["ts"] < WEATHER_CACHE_TTL:
@@ -248,9 +271,12 @@ def obtener_clima():
     _cache_clima["ts"] = ahora - WEATHER_CACHE_TTL + 60
     try:
         datos = session.get(WEATHER_URL, timeout=5).json()
+        actual = datos["current_weather"]
         data = {
-            "temp": f"{_redondear(datos['current_weather']['temperature'])} C",
+            "temp": f"{_redondear(actual['temperature'])} C",
             "lluvia": f"{int(datos['daily']['precipitation_probability_max'][0])}%",
+            "icono": icono_wmo(actual.get("weathercode")),
+            "noche": actual.get("is_day") == 0,
         }
         _cache_clima.update(ts=ahora, data=data)
     except Exception:
@@ -275,6 +301,8 @@ def get_tiempos_parada(stop_id):
             "error": "EMT no disponible",
             "clima": clima["temp"],
             "prob_lluvia": clima["lluvia"],
+            "icono_clima": clima.get("icono", ""),
+            "noche": clima.get("noche", False),
             "llegadas": [],
         }), 502
 
@@ -284,6 +312,8 @@ def get_tiempos_parada(stop_id):
         "parada": stop_id,
         "clima": clima["temp"],
         "prob_lluvia": clima["lluvia"],
+        "icono_clima": clima.get("icono", ""),   # despejado, parcial, nublado, niebla, lluvia, nieve, tormenta
+        "noche": clima.get("noche", False),
         "llegadas": llegadas,
         "avisos": mensajes,
         "servidor_ts": int(ahora),          # para sincronizar la cuenta atrás

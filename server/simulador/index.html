@@ -57,7 +57,7 @@
     </section>
 
     <section>
-      <h2>Tiempo</h2>
+      <h2>Reloj</h2>
       <div class="clockrow">
         <output id="simClock" aria-live="off">--:--:--</output>
         <div class="seg demo-only" role="radiogroup" aria-label="Velocidad">
@@ -83,6 +83,23 @@
         <button class="btn primary" id="scAviso" type="button">Provocar aviso de salida<small>Un bus justo a tiempo</small></button>
         <button class="btn quiet" id="scReset" type="button">Restablecer<small>Todo normal</small></button>
       </div>
+    </section>
+
+    <section class="demo-only">
+      <h2>Tiempo</h2>
+      <div class="fields">
+        <label for="wxIcon">Cielo<select id="wxIcon">
+          <option value="despejado">Despejado</option>
+          <option value="parcial" selected>Intervalos nubosos</option>
+          <option value="nublado">Nublado</option>
+          <option value="niebla">Niebla</option>
+          <option value="lluvia">Lluvia</option>
+          <option value="nieve">Nieve</option>
+          <option value="tormenta">Tormenta</option>
+        </select></label>
+        <label class="check" for="wxNight"><input type="checkbox" id="wxNight">De noche</label>
+      </div>
+      <p class="hint">El servidor traduce el código del tiempo de Open-Meteo a uno de estos siete iconos; de noche, el sol pasa a luna.</p>
     </section>
 
     <section class="demo-only">
