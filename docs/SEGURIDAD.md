@@ -37,6 +37,15 @@ Radxa, tu IP frente a la EMT, la rutina de salidas de casa y las credenciales Wi
 - **Flash del ESP32 legible por USB** (incluye la contraseña WiFi). Solo con acceso físico. Mitigación opcional: flash encryption del ESP32.
 - **Endpoint de la EMT no documentado.** No es un riesgo de seguridad, pero sí de servicio: la caché de 15 s y la lista de paradas mantienen la carga al mínimo.
 
+## Opción B: servidor en Cloudflare Workers
+El servidor está en internet, así que el modelo cambia: lo que en casa protegía la red, aquí lo protege una clave.
+- **Clave obligatoria** (`API_TOKEN`, secreto del Worker, nunca en el repositorio). El ESP32 la manda en `X-Clave`; el navegador recibe una cookie derivada de ella (`HttpOnly`, `Secure`, `SameSite=Strict`), no la clave. Comparación en tiempo constante y 0,4 s de espera tras cada intento fallido en `/entrar`. Tests en `cloud/test/servidor.test.mjs`.
+- **HTTPS verificado en el ESP32** con las raíces de Let's Encrypt, Google Trust Services y SSL.com (`firmware/dashboard_emt/certificados.h`). Así desaparece el riesgo de suplantación en la red local que tiene la opción A. `TLS_SIN_VERIFICAR` existe solo para diagnosticar.
+- **Sin clave no se ve nada**: `/api/*` responde 401, `/api/salud` solo `{"ok":true}` y la portada lleva a `/entrar`. Los archivos de la web y del gemelo son públicos, pero no contienen datos.
+- **Mismas defensas que en A**: paradas permitidas, caché compartida de 15 s, errores sin detalles, CSP sin código en línea, más HSTS.
+- **Riesgo aceptado**: quien tenga la clave ve tus paradas y tus avisos (a qué hora sales de casa). Si se filtra, cámbiala con `npx wrangler secret put API_TOKEN`: la anterior deja de valer al momento y hay que actualizar `secrets.h` del ESP32.
+- **Dependencia de Cloudflare**: si Cloudflare cae, la pantalla muestra *Sin conexion al servidor* hasta que vuelva. La opción A no depende de nadie más que de la EMT.
+
 ## Cortafuegos recomendado en la Radxa
 ```bash
 sudo ufw default deny incoming

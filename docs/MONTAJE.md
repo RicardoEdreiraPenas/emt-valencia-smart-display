@@ -18,7 +18,7 @@ Precios orientativos en España (octubre de 2026). En AliExpress suelen salir a 
 | ☐ | **Altavoz** | 1 | "Altavoz 3W 4 ohm 40 mm" (o 28-50 mm según el hueco de la carcasa) | 2-4 € |
 | ☐ | **Cables Dupont hembra-hembra** | 1 pack | 20 cm, pack de 40 (sobran) | 3-5 € |
 | ☐ | **Cargador USB 5 V · 2 A + cable USB-C de datos** | 1 | El cable tiene que ser **de datos**, no solo de carga (para programar) | 0-10 € |
-| ☐ | Servidor (Radxa ROCK 3C / Raspberry Pi) | 1 | Cualquier Linux siempre encendido en tu red | ya lo tienes |
+| ☐ | Servidor (Radxa ROCK 3C / Raspberry Pi) | 1 | Cualquier Linux siempre encendido en tu red. **No hace falta con la opción B** (Cloudflare, gratis) | ya lo tienes / 0 € |
 | ☐ | Piezas de construcción | — | Placas y ladrillos para la carcasa | las tuyas |
 | | | | **Total** | **≈ 25-45 €** |
 
@@ -34,7 +34,7 @@ Precios orientativos en España (octubre de 2026). En AliExpress suelen salir a 
    `https://espressif.github.io/arduino-esp32/package_esp32_index.json`
 2. *Gestor de placas* → instala **esp32 de Espressif (versión 3.x)**.
 3. *Gestor de librerías* → instala: **ArduinoJson** (v7), **Adafruit GFX Library**, **Adafruit ILI9341** y **XPT2046_Touchscreen**.
-4. En `firmware/dashboard_emt/`, copia `secrets.example.h` como `secrets.h` y pon tu WiFi. Pon la IP del servidor en `config.h`.
+4. En `firmware/dashboard_emt/`, copia `secrets.example.h` como `secrets.h` y pon tu WiFi. Pon la dirección del servidor en `config.h` (la IP de la placa con la opción A; la de tu Worker con la opción B, y entonces también `API_KEY` en `secrets.h`).
 
 **Prueba el ESP32 solo antes de cablear nada:** conéctalo por USB, elige la placa **ESP32 Dev Module** y el puerto, y sube el sketch. Si sube sin errores, la placa y el cable están bien.
 
@@ -69,7 +69,11 @@ Son 13 cables. La pantalla y el táctil **comparten** reloj y datos (SCK, MOSI, 
 
 ## 4. Poner en marcha el servidor
 
-En la Radxa (detalles en el [README](../README.md#puesta-en-marcha)):
+Elige una de las dos opciones ([comparativa en el README](../README.md#1-servidor-elige-a-o-b)).
+
+**Opción B · Cloudflare, sin placa.** Sigue [CLOUDFLARE.md](CLOUDFLARE.md): son tres comandos y te da una dirección `https://…workers.dev` y una clave para el ESP32.
+
+**Opción A · en la Radxa** (detalles en el [README](../README.md#puesta-en-marcha)):
 
 ```bash
 cd server
@@ -139,6 +143,8 @@ Medidas para diseñar la carcasa:
 | Imagen pero el táctil no responde | T_CS o los compartidos mal | Revisa T_CS (D21) y los cables "Y" de D18, D19 y D23 |
 | El táctil va al revés | Orientación del módulo | `TOUCH_INVERTIDO = true` |
 | "Sin conexion al servidor" | IP mal o servidor parado | Revisa `config.h` y que `app.py` esté corriendo |
+| "Clave incorrecta (API_KEY)" | Opción B: `API_KEY` de `secrets.h` distinta de la del Worker | Copia la clave de nuevo o genera otra con `wrangler secret put API_TOKEN` |
+| "Sin conexion al servidor" con `https://` | Certificado o dirección del Worker | Revisa `SERVER_ROOT`; para diagnosticar, prueba un momento con `TLS_SIN_VERIFICAR` |
 | "EMT no disponible" | La EMT no responde | Se recupera solo; mientras tanto muestra el último dato (punto naranja) |
 | El ESP32 se reinicia al sonar | Cargador flojo | Usa uno de **2 A** |
 | Zumbido o ruido | Cables de audio largos | Acorta los cables BCLK, LRC y DIN, o baja el volumen |

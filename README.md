@@ -7,6 +7,7 @@
   <img src="https://img.shields.io/badge/ESP32-Arduino%203.x-E7352C?logo=espressif&logoColor=white" alt="ESP32">
   <img src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black" alt="React">
+  <img src="https://img.shields.io/badge/Cloudflare-Workers-F38020?logo=cloudflare&logoColor=white" alt="Cloudflare Workers">
   <img src="https://img.shields.io/badge/licencia-MIT-informational" alt="Licencia MIT">
 </p>
 
@@ -18,16 +19,27 @@
 
 Pantalla táctil que muestra **en tiempo real** cuándo llegan los autobuses de la EMT de València a tus paradas, con el tiempo, la probabilidad de lluvia y la hora. Cuando toca salir de casa para no perder el bus, **lo dice en voz alta**.
 
-El sistema tiene tres piezas: un **ESP32** con pantalla de 2,8" montado en una carcasa de bloques de construcción, un **servidor Python** en una placa ARM (Radxa ROCK 3C o Raspberry Pi) y una **web instalable** para el móvil.
+El sistema tiene tres piezas: un **ESP32** con pantalla de 2,8" montado en una carcasa de bloques de construcción, un **servidor** y una **web instalable** para el móvil. El servidor se puede montar de dos formas, con la misma API:
+
+| | **Opción A · Placa en casa** | **Opción B · Cloudflare, sin placa** |
+|---|---|---|
+| Dónde corre | Radxa ROCK 3C o Raspberry Pi en tu red ([`server/`](server/)) | Cloudflare Workers, en internet ([`cloud/`](cloud/)) |
+| Coste | La placa (≈ 40–60 €) y su consumo | 0 €: cabe de sobra en el plan gratuito |
+| Voz del aviso | Piper, offline en la placa | Workers AI (Deepgram Aura 2, español) |
+| Acceso | Solo desde tu WiFi (o VPN) | Desde cualquier sitio, con clave |
+| ESP32 | `http://<ip-de-la-placa>:5000` | `https://…workers.dev` + `API_KEY` |
+| Para quién | Quieres todo en casa y sin depender de nadie | No quieres montar ni mantener otra placa |
+
+Se elige en [Puesta en marcha](#1-servidor-elige-a-o-b). Las dos opciones pasan los mismos tests: el Worker se comprueba contra las salidas del servidor en Python ([paridad](#calidad)).
 
 **Lo más destacable**
 
 - **La misma fuente que la app oficial.** Consulta directamente el SAE de la EMT (el sistema de seguimiento por GPS de los autobuses), sin librerías intermedias.
 - **El tiempo de un vistazo.** Icono del cielo (sol, nubes, lluvia, tormenta, niebla, nieve; luna de noche), temperatura y probabilidad de lluvia de [Open-Meteo](https://open-meteo.com/).
 - **Distingue lo real de lo previsto.** Las estimaciones en tiempo real se muestran en blanco; las horas teóricas, en gris; "Pròxim" se convierte en *Llegando* y las líneas desviadas se marcan en naranja.
-- **Aviso de salida por voz.** Calcula `llegada del bus − minutos andando` y avisa en el último minuto, con voz neuronal offline (Piper TTS).
+- **Aviso de salida por voz.** Calcula `llegada del bus − minutos andando` y avisa en el último minuto, con voz neuronal (Piper offline en la placa, o Workers AI en Cloudflare).
 - **Robusto.** Caché compartida de 15 s; si la EMT no responde, muestra el último dato bueno y lo marca.
-- **Seguro por diseño.** Lista de paradas permitidas, sin CORS, servicio aislado con systemd y 32 tests automáticos (10 de seguridad). Ver [docs/SEGURIDAD.md](docs/SEGURIDAD.md).
+- **Seguro por diseño.** Lista de paradas permitidas, sin CORS, servicio aislado con systemd (A) o clave de acceso y HTTPS con certificados verificados (B). Más de 90 tests automáticos. Ver [docs/SEGURIDAD.md](docs/SEGURIDAD.md).
 
 ---
 
@@ -159,7 +171,9 @@ El audio se genera en el servidor con [Piper](https://github.com/OHF-Voice/piper
 
 ## Puesta en marcha
 
-### 1. Servidor
+### 1. Servidor: elige A o B
+
+#### Opción A · Raspberry / Radxa en casa
 
 ```bash
 git clone https://github.com/RicardoEdreiraPenas/emt-valencia-smart-display.git
@@ -177,9 +191,23 @@ curl http://localhost:5000/api/parada/708
 
 Para dejarlo como servicio que arranca solo y está aislado del sistema, sigue las instrucciones de [`deploy/dashboard-emt.service`](deploy/dashboard-emt.service).
 
+#### Opción B · Cloudflare Workers, sin placa
+
+Necesitas una cuenta gratuita de Cloudflare y Node.js 20 o superior.
+
+```bash
+cd emt-valencia-smart-display/cloud
+npx wrangler login                    # una vez
+# edita wrangler.toml: PARADAS, CLIMA, REGLAS y SILENCIO
+npm run desplegar                     # compila la web, junta el gemelo y publica
+openssl rand -hex 20 | tee ~/emt-clave.txt | npx wrangler secret put API_TOKEN
+```
+
+Te queda en `https://emt-smart-display.<tu-subdominio>.workers.dev`. En el navegador, entra una vez en `/entrar` con la clave; en el ESP32, pon la dirección en `SERVER_ROOT` y la clave en `API_KEY`. Paso a paso, con la voz, los límites del plan gratuito y cómo probarlo: **[docs/CLOUDFLARE.md](docs/CLOUDFLARE.md)**.
+
 ### 2. Configuración
 
-Todo lo personal está en [`server/config.py`](server/config.py):
+Todo lo personal está en [`server/config.py`](server/config.py) (opción A) o en `[vars]` de [`cloud/wrangler.toml`](cloud/wrangler.toml) (opción B), con los mismos campos:
 
 ```python
 PARADAS = [708, 1676, 2080, 1619, 697]  # las que muestra la pantalla
@@ -198,8 +226,8 @@ El número de parada está en el poste de cada parada y en la app de la EMT.
 
 1. Instala el **core Arduino-ESP32 3.x** y las librerías `ArduinoJson` (v7), `Adafruit GFX Library`, `Adafruit ILI9341` y `XPT2046_Touchscreen`.
 2. En `firmware/dashboard_emt/`:
-   - copia `secrets.example.h` como `secrets.h` y pon tu WiFi (está en `.gitignore`);
-   - en `config.h`, pon la IP del servidor y las mismas paradas que en `config.py`.
+   - copia `secrets.example.h` como `secrets.h` y pon tu WiFi (está en `.gitignore`); con la opción B, también `API_KEY`;
+   - en `config.h`, pon la dirección del servidor (`http://<ip>:5000` o `https://…workers.dev`) y las mismas paradas que en el servidor.
 3. Sube el sketch. **Calibrar el táctil:** abre el Monitor Serie (115200), toca a izquierda y derecha y ajusta `TOUCH_X_MITAD` (y `TOUCH_INVERTIDO` si va al revés).
 
 ### 4. Web para el móvil
@@ -210,7 +238,7 @@ npm ci
 npm run build      # genera server/web, que sirve el propio servidor
 ```
 
-Abre `http://<ip-del-servidor>:5000` en el móvil y añádela a la pantalla de inicio. Para usarla fuera de casa, accede por VPN (por ejemplo Tailscale); **no abras el puerto en el router**.
+Abre `http://<ip-del-servidor>:5000` (A) o la dirección de tu Worker (B) en el móvil y añádela a la pantalla de inicio. Con la opción A, para usarla fuera de casa accede por VPN (por ejemplo Tailscale); **no abras el puerto en el router**. Con la opción B ya funciona desde cualquier sitio.
 
 ---
 
@@ -224,6 +252,8 @@ Abre `http://<ip-del-servidor>:5000` en el móvil y añádela a la pantalla de i
 | GET | `/api/audio/<id>.wav` | Audio del aviso (PCM 16 bits mono) |
 | GET | `/api/salud` | Estado del servicio |
 | GET | `/simulador/` | Gemelo digital del aparato |
+
+En la opción B, todas las rutas `/api/` (menos `/api/salud`) piden la clave: cabecera `X-Clave` (ESP32) o la cookie que deja `/entrar` (navegador). Sin clave responden 401.
 
 <details>
 <summary>Ejemplo de respuesta de <code>/api/parada/708</code></summary>
@@ -257,17 +287,20 @@ Abre `http://<ip-del-servidor>:5000` en el móvil y añádela a la pantalla de i
 ## Calidad
 
 ```bash
-cd server && pip install pytest && python -m pytest -v tests
+cd server && pip install pytest && python -m pytest -v tests   # 35 tests
+cd cloud && npm test                                           # 56 tests, sin dependencias
 ```
 
 - **Parser del SAE:** respuestas reales de la EMT ("Pròxim", horas previstas, líneas desviadas, una parada con 28 buses) y cruce de medianoche.
 - **Avisos:** franjas, silencio nocturno, no repetir el mismo bus, filtro de líneas y WAV válido.
 - **Tiempo:** traducción de los códigos WMO a iconos, con una respuesta real de Open-Meteo.
+- **Paridad A/B:** `server/tests/paridad.py` guarda lo que devuelve el servidor en Python con respuestas reales de la EMT (también el día del cambio de hora), los 101 códigos del tiempo, una semana de franjas de aviso, una secuencia de avisos y el tono; el Worker tiene que dar exactamente lo mismo, ids de aviso incluidos.
+- **Worker de Cloudflare:** clave (cabecera, cookie, intentos fallidos), caché, último dato bueno, Open-Meteo caído, avisos con voz y su cabecera WAV, y voz caída (tono).
 - **Intermediario de la demo:** solo paradas permitidas, solo GET, CORS restringido y caché de 20 s (`cd proxy-demo && npm test`).
 - **Gemelo digital:** se sirve desde el servidor y cumple su política de seguridad (sin código en línea).
 - **Seguridad:** paradas no permitidas, CORS, cabeceras, errores sin detalles internos, IDs de audio, rutas de API y bomba XML.
 
-La [CI](.github/workflows/ci.yml) ejecuta los tests, compila la web y **compila el firmware para ESP32** en cada cambio.
+La [CI](.github/workflows/ci.yml) ejecuta los tests de las dos opciones, comprueba que el Worker se empaqueta, compila la web y **compila el firmware para ESP32 en sus dos variantes** (http en casa y https con clave) en cada cambio.
 
 ## Estructura
 
@@ -277,13 +310,17 @@ La [CI](.github/workflows/ci.yml) ejecuta los tests, compila la web y **compila 
 │   ├── avisos.py        Motor de avisos de salida y voz
 │   ├── config.py        Tus paradas y avisos
 │   ├── simulador/       Gemelo digital (se sirve en /simulador/)
-│   └── tests/           32 tests + respuestas reales de la EMT y Open-Meteo
+│   └── tests/           35 tests + respuestas reales de la EMT y Open-Meteo
+├── cloud/               Opción B: el mismo servidor en Cloudflare Workers
+│   ├── src/             API, lógica (port de app.py y avisos.py) y estado en la Cache API
+│   ├── test/            56 tests, incluida la paridad con Python
+│   └── wrangler.toml    Tus paradas y avisos (opción B)
 ├── firmware/
-│   └── dashboard_emt/   Sketch del ESP32 (pantalla, táctil, audio I2S)
+│   └── dashboard_emt/   Sketch del ESP32 (pantalla, táctil, audio I2S, HTTPS)
 ├── frontend/            Web React + Tailwind (Vite)
 ├── proxy-demo/          Intermediario de la demo pública (Cloudflare Worker, 5 tests)
 ├── deploy/              Servicio systemd endurecido
-└── docs/                Guía de montaje, seguridad e imágenes
+└── docs/                Guía de montaje, Cloudflare, seguridad e imágenes
 ```
 
 ## Hoja de ruta
@@ -298,6 +335,6 @@ La [CI](.github/workflows/ci.yml) ejecuta los tests, compila la web y **compila 
 - Datos de llegadas: **EMT València**. El endpoint del SAE no está documentado públicamente; este proyecto es **no oficial**, para uso personal, y limita las consultas con caché. El formato del endpoint se documentó primero en [ElEd0/EMTValencia-API](https://github.com/ElEd0/EMTValencia-API).
 - Datos meteorológicos: [Open-Meteo](https://open-meteo.com/) (CC BY 4.0).
 - La demo pública consulta la EMT a través de un intermediario con caché, solo para cinco paradas, para mantener la carga al mínimo.
-- Voz: [Piper TTS](https://github.com/OHF-Voice/piper1-gpl).
+- Voz: [Piper TTS](https://github.com/OHF-Voice/piper1-gpl) (opción A) y [Deepgram Aura 2](https://developers.cloudflare.com/workers-ai/models/aura-2-es/) en Workers AI (opción B).
 
 Proyecto de [Ricardo Edreira Penas](https://github.com/RicardoEdreiraPenas) · Licencia [MIT](LICENSE).
