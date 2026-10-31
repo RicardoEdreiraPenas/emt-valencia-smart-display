@@ -76,3 +76,13 @@ def test_linea_desviada():
     assert c1["linea"] == "C1" and c1["minutos"] == 43
     assert l81["linea"] == "81" and l81["desviada"] is True and l81["texto"] == "Desviada"
     assert l81["tiempo_real"] is False and l81["llega_a"] is None
+
+
+def test_linea_desviada_visible_entre_las_3_primeras():
+    """Hallado con el gemelo digital: con 3+ buses, la desviada quedaba fuera de pantalla."""
+    buses = "".join(
+        f"<bus><linea>{l}</linea><destino>X</destino><minutos>{m}</minutos><horaLlegada/><error/></bus>"
+        for l, m in [("7", "2 min."), ("27", "5 min."), ("81", "LÍNIA DESVIADA"), ("7", "15 min."), ("27", "22 min.")])
+    llegadas, _ = app.parsear_sae(f"<estimacion><solo_parada>{buses}</solo_parada></estimacion>".encode(), AHORA)
+    assert [b["linea"] for b in llegadas] == ["7", "27", "81", "7", "27"]
+    assert llegadas[2]["desviada"] is True

@@ -22,7 +22,7 @@ El sistema tiene tres piezas: un **ESP32** con pantalla de 2,8" montado en una c
 - **Distingue lo real de lo previsto.** Las estimaciones en tiempo real se muestran en blanco; las horas teóricas, en gris; "Pròxim" se convierte en *Llegando* y las líneas desviadas se marcan en naranja.
 - **Aviso de salida por voz.** Calcula `llegada del bus − minutos andando` y avisa en el último minuto, con voz neuronal offline (Piper TTS).
 - **Robusto.** Caché compartida de 15 s; si la EMT no responde, muestra el último dato bueno y lo marca.
-- **Seguro por diseño.** Lista de paradas permitidas, sin CORS, servicio aislado con systemd y 25 tests automáticos (10 de seguridad). Ver [docs/SEGURIDAD.md](docs/SEGURIDAD.md).
+- **Seguro por diseño.** Lista de paradas permitidas, sin CORS, servicio aislado con systemd y 29 tests automáticos (10 de seguridad). Ver [docs/SEGURIDAD.md](docs/SEGURIDAD.md).
 
 ---
 
@@ -41,7 +41,23 @@ El sistema tiene tres piezas: un **ESP32** con pantalla de 2,8" montado en una c
 
 ---
 
-## Arquitectura
+## Gemelo digital
+
+<p align="center"><img src="docs/img/gemelo.png" alt="Gemelo digital: la pantalla simulada con un aviso de salida y el panel de escenarios" width="100%"></p>
+
+Un simulador en el navegador para probar el sistema **sin montar el hardware**. La pantalla se dibuja con el mismo código que el firmware, traducido línea a línea: coordenadas, colores, textos, refrescos cada 20 s, banner de 60 s y validaciones. El táctil funciona haciendo clic a la izquierda o a la derecha.
+
+- **Modo real.** Abre `http://<ip-del-servidor>:5000/simulador/` y usa tu servidor y los datos de la EMT, como el ESP32.
+- **Modo demo.** Servidor simulado (misma lógica que `app.py` y `avisos.py`) con el tiempo acelerable (×10, ×60) y escenarios a un clic: bus llegando, sin servicio, línea desviada, EMT caída, servidor apagado, WiFi caído y aviso de salida con voz.
+
+**Lo que encontró antes de montar nada**, ya corregido en el firmware y el servidor:
+
+| Escenario | Fallo | Arreglo |
+|---|---|---|
+| Línea desviada en una parada con 3+ buses | La desviada iba al final de la lista y la pantalla solo muestra 3 tarjetas: nunca se veía | El servidor la coloca en la 3.ª posición (con test) |
+| Se cae el WiFi | La pantalla seguía mostrando minutos de hace rato sin avisar | Aviso **Sin WiFi** en rojo y datos frescos al reconectar |
+| Termina un aviso sin WiFi | El banner verde quedaba a medio borrar | Se redibuja la cabecera entera |
+
 
 <p align="center"><img src="docs/img/arquitectura.png" alt="Diagrama de arquitectura" width="100%"></p>
 
@@ -199,6 +215,7 @@ Abre `http://<ip-del-servidor>:5000` en el móvil y añádela a la pantalla de i
 | GET | `/api/aviso` | Aviso de salida vigente, o 204 |
 | GET | `/api/audio/<id>.wav` | Audio del aviso (PCM 16 bits mono) |
 | GET | `/api/salud` | Estado del servicio |
+| GET | `/simulador/` | Gemelo digital del aparato |
 
 <details>
 <summary>Ejemplo de respuesta de <code>/api/parada/708</code></summary>
@@ -235,6 +252,7 @@ cd server && pip install pytest && python -m pytest -v tests
 
 - **Parser del SAE:** respuestas reales de la EMT ("Pròxim", horas previstas, líneas desviadas, una parada con 28 buses) y cruce de medianoche.
 - **Avisos:** franjas, silencio nocturno, no repetir el mismo bus, filtro de líneas y WAV válido.
+- **Gemelo digital:** se sirve desde el servidor y cumple su política de seguridad (sin código en línea).
 - **Seguridad:** paradas no permitidas, CORS, cabeceras, errores sin detalles internos, IDs de audio, rutas de API y bomba XML.
 
 La [CI](.github/workflows/ci.yml) ejecuta los tests, compila la web y **compila el firmware para ESP32** en cada cambio.
@@ -246,7 +264,8 @@ La [CI](.github/workflows/ci.yml) ejecuta los tests, compila la web y **compila 
 │   ├── app.py           API, parser del SAE, caché y web estática
 │   ├── avisos.py        Motor de avisos de salida y voz
 │   ├── config.py        Tus paradas y avisos
-│   └── tests/           25 tests + respuestas reales de la EMT
+│   ├── simulador/       Gemelo digital (se sirve en /simulador/)
+│   └── tests/           29 tests + respuestas reales de la EMT
 ├── firmware/
 │   └── dashboard_emt/   Sketch del ESP32 (pantalla, táctil, audio I2S)
 ├── frontend/            Web React + Tailwind (Vite)

@@ -65,6 +65,8 @@ unsigned long lastBusUpdate = 0;
 unsigned long lastTimeUpdate = 0;
 unsigned long lastTouchTime = 0;
 unsigned long lastWifiTry = 0;
+bool wifiPerdido = false;          // ya se avisó en pantalla de que no hay WiFi
+void drawSinWifi(bool cabeceraEntera = false);
 const unsigned long busDelay = 20000;      // el servidor cachea 15 s
 const unsigned long timeDelay = 10000;
 const unsigned long touchCooldown = 500;
@@ -249,8 +251,24 @@ void setup() {
 }
 
 void loop() {
-  // WiFi caída: reintento sin bloquear el resto
-  if (WiFi.status() != WL_CONNECTED && millis() - lastWifiTry > wifiRetryDelay) {
+  bool wifiOk = WiFi.status() == WL_CONNECTED;
+
+  // WiFi caído: se avisa en pantalla, porque los minutos que se ven dejan de
+  // actualizarse y ya no son fiables. Al volver, se piden datos frescos.
+  if (!wifiOk && !wifiPerdido) {
+    wifiPerdido = true;
+    Serial.println("WiFi perdido");
+    drawSinWifi();
+  }
+  if (wifiOk && wifiPerdido) {
+    wifiPerdido = false;
+    Serial.println("WiFi recuperado");
+    fetchBusData();
+    lastBusUpdate = millis();
+  }
+
+  // Reintento de conexión sin bloquear el resto
+  if (!wifiOk && millis() - lastWifiTry > wifiRetryDelay) {
     lastWifiTry = millis();
     WiFi.disconnect();
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -292,6 +310,7 @@ void loop() {
   if (avisoHasta != 0 && millis() >= avisoHasta) {
     avisoHasta = 0;
     if (WiFi.status() == WL_CONNECTED) fetchBusData();
+    else drawSinWifi(true);
     lastBusUpdate = millis();
   }
 }
@@ -311,6 +330,22 @@ String sinAcentos(const String& in) {
     }
   }
   return out;
+}
+
+void drawSinWifi(bool cabeceraEntera) {
+  if (avisoActivo()) return;
+  tft.setFont(&FreeSansBold9pt7b);
+  if (cabeceraEntera) {            // p. ej. al terminar un banner de aviso
+    tft.fillRect(0, 0, 320, 35, COLOR_BG);
+    tft.setTextColor(ILI9341_WHITE);
+    tft.setCursor(10, 24);
+    tft.print("EMT " + String(paradas[paradaActual]));
+    drawClock();
+  }
+  tft.fillRect(120, 0, 130, 35, COLOR_BG);
+  tft.setTextColor(COLOR_RED);
+  tft.setCursor(130, 24);
+  tft.print("Sin WiFi");
 }
 
 void drawLoading() {

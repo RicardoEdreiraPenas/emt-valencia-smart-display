@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Gemelo EMT Smart Display</title>
+<link rel="stylesheet" href="sim.css">
+</head>
+<body data-mode="demo">
+<header class="top">
+  <div>
+    <span class="eyebrow">Gemelo digital</span>
+    <h1>EMT Smart Display</h1>
+  </div>
+  <p class="lede">El aparato completo sin soldar nada: la pantalla del ESP32 dibujada igual que el firmware, el táctil, el servidor y el aviso de salida. Toca la pantalla a la izquierda o a la derecha para cambiar de parada.</p>
+</header>
+
+<main class="bench">
+  <section class="rig" aria-label="Aparato simulado">
+    <div class="case">
+      <div class="studs" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="bezel">
+        <div class="screen">
+          <canvas id="tft" width="960" height="720" role="img" aria-label="Pantalla TFT de 320 por 240 píxeles. Pulsa a la izquierda o a la derecha para cambiar de parada."></canvas>
+          <span class="half l" aria-hidden="true">◀</span><span class="half r" aria-hidden="true">▶</span>
+          <span id="ripple" aria-hidden="true"></span>
+        </div>
+      </div>
+      <span class="label" aria-hidden="true">ILI9341 · 320×240</span>
+      <div id="speaker" aria-hidden="true" title="Altavoz"><i></i><i></i><i></i></div>
+    </div>
+
+    <div class="taps">
+      <button class="btn" id="tapL" type="button">◀ Toque izquierda</button>
+      <button class="btn" id="tapR" type="button">Toque derecha ▶</button>
+    </div>
+
+    <dl class="status">
+      <div><dt>WiFi</dt><dd id="stWifi">conectando</dd></div>
+      <div><dt>Parada</dt><dd id="stStop">—</dd></div>
+      <div><dt>Próximo refresco</dt><dd id="stNext">—</dd></div>
+      <div><dt>Aviso</dt><dd id="stAviso">ninguno</dd></div>
+      <div><dt>Datos</dt><dd id="stSource">Demo simulada</dd></div>
+    </dl>
+  </section>
+
+  <aside class="panel" aria-label="Panel de pruebas">
+    <section>
+      <h2>Fuente de datos</h2>
+      <div class="seg" role="radiogroup" aria-label="Fuente de datos">
+        <label><input type="radio" name="mode" id="modeDemo" value="demo" checked><span>Demo simulada</span></label>
+        <label><input type="radio" name="mode" id="modeReal" value="real" disabled><span>Servidor real</span></label>
+      </div>
+      <p class="hint" id="realNote">El modo real se activa al abrir el simulador desde tu servidor: <code>http://&lt;ip-del-servidor&gt;:5000/simulador/</code>. Así usa tu configuración y los datos reales de la EMT, igual que el ESP32.</p>
+      <p class="hint real-only">Conectado a tu servidor: las paradas, las llegadas y los avisos son reales.</p>
+    </section>
+
+    <section>
+      <h2>Tiempo</h2>
+      <div class="clockrow">
+        <output id="simClock" aria-live="off">--:--:--</output>
+        <div class="seg demo-only" role="radiogroup" aria-label="Velocidad">
+          <label><input type="radio" name="speed" id="speed1" value="1" checked><span>×1</span></label>
+          <label><input type="radio" name="speed" id="speed10" value="10"><span>×10</span></label>
+          <label><input type="radio" name="speed" id="speed60" value="60"><span>×60</span></label>
+        </div>
+        <button class="btn demo-only" id="jump" type="button">+5 min</button>
+      </div>
+      <p class="hint demo-only">Acelerar el tiempo también acelera los refrescos del ESP32 (cada 20 s) y la cuenta atrás del banner.</p>
+    </section>
+
+    <section class="demo-only">
+      <h2>Escenarios</h2>
+      <p class="hint">Se aplican a la parada que se ve en pantalla.</p>
+      <div class="grid">
+        <button class="btn" id="scArrive" type="button">Bus llegando<small>Primera línea en menos de 1 min</small></button>
+        <button class="btn" id="scNoService" type="button" aria-pressed="false">Sin servicio<small>La EMT responde SENSE ESTIMACIONS</small></button>
+        <button class="btn" id="scDetour" type="button" aria-pressed="false">Línea desviada<small>LÍNIA DESVIADA</small></button>
+        <button class="btn" id="scEmt" type="button" aria-pressed="false">EMT caída<small>Último dato 5 min, luego error</small></button>
+        <button class="btn" id="scServer" type="button" aria-pressed="false">Servidor apagado<small>La Radxa no contesta</small></button>
+        <button class="btn" id="scWifi" type="button" aria-pressed="false">WiFi caído<small>El ESP32 pierde la red</small></button>
+        <button class="btn primary" id="scAviso" type="button">Provocar aviso de salida<small>Un bus justo a tiempo</small></button>
+        <button class="btn quiet" id="scReset" type="button">Restablecer<small>Todo normal</small></button>
+      </div>
+    </section>
+
+    <section class="demo-only">
+      <h2>Aviso de salida</h2>
+      <div class="fields">
+        <label for="ruleStop">Parada<select id="ruleStop"></select></label>
+        <label for="ruleWalk">Minutos andando<input type="number" id="ruleWalk" min="0" max="30" value="5"></label>
+        <label class="check" for="ruleOn"><input type="checkbox" id="ruleOn" checked>Avisos activos</label>
+      </div>
+      <p class="hint">Igual que <code>server/avisos.py</code>: suena cuando llegada − minutos andando cae entre −30 s y +60 s, una sola vez por autobús. En la demo no se aplican la franja horaria ni el silencio nocturno.</p>
+    </section>
+
+    <section>
+      <h2>Sonido</h2>
+      <div class="fields">
+        <button class="btn" id="soundBtn" type="button" aria-pressed="false">Activar sonido</button>
+        <button class="btn quiet" id="testVoice" type="button">Probar voz</button>
+        <label for="vol">Volumen <output id="volOut">0.6</output><input type="range" id="vol" min="0" max="1" step="0.1" value="0.6"></label>
+      </div>
+      <p class="hint demo-only">En la demo la voz es la del navegador; en el aparato real la genera Piper en el servidor.</p>
+    </section>
+
+    <section class="log">
+      <h2>Registro del ESP32</h2>
+      <ol id="log" aria-live="polite"></ol>
+    </section>
+  </aside>
+</main>
+<script src="sim.js"></script>
+</body>
+</html>

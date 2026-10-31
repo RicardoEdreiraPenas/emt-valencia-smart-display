@@ -15,7 +15,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 import requests
-from flask import Flask, Response, abort, jsonify, send_from_directory
+from flask import Flask, Response, abort, jsonify, redirect, send_from_directory
 
 import avisos
 import config
@@ -164,6 +164,12 @@ def parsear_sae(xml_text, ahora=None):
         })
 
     llegadas.sort(key=lambda b: b["llega_a"] or float("inf"))
+    # Las líneas desviadas no tienen hora: al final quedarían fuera de las 3
+    # tarjetas de la pantalla. Van en la 3.ª posición para que siempre se vean.
+    desviadas = [b for b in llegadas if b["desviada"]]
+    if desviadas:
+        normales = [b for b in llegadas if not b["desviada"]]
+        llegadas = normales[:2] + desviadas + normales[2:]
     return llegadas, avisos
 
 
@@ -314,6 +320,19 @@ def get_audio(aviso_id):
 
 
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
+SIM_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "simulador")
+
+
+@app.route("/simulador")
+def simulador_raiz():
+    return redirect("/simulador/")
+
+
+@app.route("/simulador/")
+@app.route("/simulador/<path:ruta>")
+def simulador(ruta="index.html"):
+    """Gemelo digital: el aparato simulado en el navegador, con los datos de este servidor."""
+    return send_from_directory(SIM_DIR, ruta)
 
 
 @app.route("/")
