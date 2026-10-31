@@ -54,8 +54,9 @@ El sistema tiene tres piezas: un **ESP32** con pantalla de 2,8" montado en una c
 
 Un simulador en el navegador para probar el sistema **sin montar el hardware**. La pantalla se dibuja con el mismo código que el firmware, traducido línea a línea: coordenadas, colores, textos, refrescos cada 20 s, banner de 60 s y validaciones. El táctil funciona haciendo clic a la izquierda o a la derecha.
 
-- **Modo real.** Abre `http://<ip-del-servidor>:5000/simulador/` y usa tu servidor y los datos de la EMT, como el ESP32.
-- **Modo demo** (el de la [demo publicada](https://ricardoedreirapenas.github.io/emt-valencia-smart-display/)). Servidor simulado (misma lógica que `app.py` y `avisos.py`) con el tiempo acelerable (×10, ×60) y escenarios a un clic: bus llegando, sin servicio, línea desviada, EMT caída, servidor apagado, WiFi caído, aviso de salida con voz y los siete iconos del tiempo, de día y de noche.
+- **EMT en directo** (el modo de la [demo publicada](https://ricardoedreirapenas.github.io/emt-valencia-smart-display/)). Llegadas reales de tres paradas del centro de València, tiempo real de Open-Meteo y avisos de salida sobre datos reales. Como la EMT no deja que otras webs le pidan datos, pasan por un intermediario propio ([`proxy-demo/`](proxy-demo/), un Cloudflare Worker) que solo atiende esas tres paradas y guarda cada respuesta 20 s: la EMT recibe como mucho 3 consultas cada 20 s, haya los visitantes que haya.
+- **Tu servidor.** Abre `http://<ip-del-servidor>:5000/simulador/` y usa tu propio servidor, tus paradas y tu configuración, como el ESP32.
+- **Demo simulada.** Servidor simulado (misma lógica que `app.py` y `avisos.py`) con el tiempo acelerable (×10, ×60) y escenarios a un clic: bus llegando, sin servicio, línea desviada, EMT caída, servidor apagado, WiFi caído, aviso de salida con voz y los siete iconos del tiempo, de día y de noche.
 
 **Lo que encontró antes de montar nada**, ya corregido en el firmware y el servidor:
 
@@ -262,6 +263,7 @@ cd server && pip install pytest && python -m pytest -v tests
 - **Parser del SAE:** respuestas reales de la EMT ("Pròxim", horas previstas, líneas desviadas, una parada con 28 buses) y cruce de medianoche.
 - **Avisos:** franjas, silencio nocturno, no repetir el mismo bus, filtro de líneas y WAV válido.
 - **Tiempo:** traducción de los códigos WMO a iconos, con una respuesta real de Open-Meteo.
+- **Intermediario de la demo:** solo paradas permitidas, solo GET, CORS restringido y caché de 20 s (`cd proxy-demo && npm test`).
 - **Gemelo digital:** se sirve desde el servidor y cumple su política de seguridad (sin código en línea).
 - **Seguridad:** paradas no permitidas, CORS, cabeceras, errores sin detalles internos, IDs de audio, rutas de API y bomba XML.
 
@@ -279,6 +281,7 @@ La [CI](.github/workflows/ci.yml) ejecuta los tests, compila la web y **compila 
 ├── firmware/
 │   └── dashboard_emt/   Sketch del ESP32 (pantalla, táctil, audio I2S)
 ├── frontend/            Web React + Tailwind (Vite)
+├── proxy-demo/          Intermediario de la demo pública (Cloudflare Worker, 5 tests)
 ├── deploy/              Servicio systemd endurecido
 └── docs/                Guía de montaje, seguridad e imágenes
 ```
@@ -294,6 +297,7 @@ La [CI](.github/workflows/ci.yml) ejecuta los tests, compila la web y **compila 
 
 - Datos de llegadas: **EMT València**. El endpoint del SAE no está documentado públicamente; este proyecto es **no oficial**, para uso personal, y limita las consultas con caché. El formato del endpoint se documentó primero en [ElEd0/EMTValencia-API](https://github.com/ElEd0/EMTValencia-API).
 - Datos meteorológicos: [Open-Meteo](https://open-meteo.com/) (CC BY 4.0).
+- La demo pública consulta la EMT a través de un intermediario con caché, solo para tres paradas del centro, para mantener la carga al mínimo.
 - Voz: [Piper TTS](https://github.com/OHF-Voice/piper1-gpl).
 
 Proyecto de [Ricardo Edreira Penas](https://github.com/RicardoEdreiraPenas) · Licencia [MIT](LICENSE).
