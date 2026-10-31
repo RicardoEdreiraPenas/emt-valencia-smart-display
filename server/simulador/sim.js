@@ -522,7 +522,7 @@
   // Demo pública: llegadas reales de la EMT a través de un intermediario
   // (proxy-demo/, Cloudflare Worker con caché de 20 s) y tiempo real de
   // Open-Meteo. Misma normalización y mismos avisos que server/app.py.
-  const PROXY = 'https://emt-demo-proxy.PENDIENTE.workers.dev';
+  const PROXY = 'https://emt-demo-proxy.1ricardox.workers.dev';
   const PARADAS_LIVE = [708, 1676, 2080];
 
   function iconoWmo(c) {
