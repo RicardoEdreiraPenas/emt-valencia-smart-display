@@ -6,6 +6,7 @@ oficial, la web y los paneles de parada), sin la librería emtvlcapi.
 
 Endpoint: GET /api/parada/<id>
 """
+import math
 import os
 import time
 import threading
@@ -118,9 +119,13 @@ def parsear_sae(xml_text, ahora=None):
         #   "37 min."   -> estimación en tiempo real
         #   "Próximo"   -> llegando
         #   "02:57:45"  -> hora prevista (2º bus de la línea, nocturnos...)
+        #   "LÍNIA DESVIADA" -> línea desviada (obras, actos): sin estimación
         # y a veces la hora viene en 'horaLlegada'.
         t = (minutos_txt or "").lower()
-        if t.startswith("pr"):
+        desviada = "desvia" in t          # "LÍNIA DESVIADA": sin estimación
+        if desviada:
+            pass
+        elif t.startswith("pr"):
             minutos, llegando = 0, True
         elif "min" in t:
             try:
@@ -140,8 +145,10 @@ def parsear_sae(xml_text, ahora=None):
         # Hora absoluta prevista (base para la cuenta atrás de la fase 2)
         if minutos is not None:
             llega_a = int(ahora + minutos * 60)
-        else:
+        elif hora:
             llega_a = _hora_a_epoch(hora, ahora)
+        else:
+            llega_a = None
 
         llegadas.append({
             "linea": linea or "?",
@@ -150,7 +157,9 @@ def parsear_sae(xml_text, ahora=None):
             "llegando": llegando,
             "hora": hora,                # "02:57" cuando la EMT da hora, si no None
             "tiempo_real": minutos is not None,
-            "texto": "0" if llegando else (str(minutos) if minutos is not None else hora),
+            "desviada": desviada,
+            "texto": "0" if llegando else (str(minutos) if minutos is not None
+                                           else "Desviada" if desviada else hora),
             "llega_a": llega_a,          # epoch en segundos
         })
 
@@ -219,6 +228,11 @@ def obtener_llegadas(stop_id):
 
 # --- CLIMA -------------------------------------------------------------------
 
+def _redondear(x):
+    """Redondeo 'de toda la vida': 16.5 -> 17 (round() de Python daría 16)."""
+    return math.floor(float(x) + 0.5)
+
+
 def obtener_clima():
     ahora = time.time()
     if ahora - _cache_clima["ts"] < WEATHER_CACHE_TTL:
@@ -229,7 +243,7 @@ def obtener_clima():
     try:
         datos = session.get(WEATHER_URL, timeout=5).json()
         data = {
-            "temp": f"{round(float(datos['current_weather']['temperature']))} C",
+            "temp": f"{_redondear(datos['current_weather']['temperature'])} C",
             "lluvia": f"{int(datos['daily']['precipitation_probability_max'][0])}%",
         }
         _cache_clima.update(ts=ahora, data=data)

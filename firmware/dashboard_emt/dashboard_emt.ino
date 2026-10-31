@@ -422,6 +422,10 @@ void drawBody(JsonDocument& doc) {
       tft.setTextColor(COLOR_GREEN);
       tft.setCursor(220, yPos + 32);
       tft.print("Llega");
+    } else if (bus["desviada"] | false) {
+      tft.setTextColor(COLOR_ORANGE);
+      tft.setCursor(215, yPos + 32);
+      tft.print("Desviada");
     } else if (real) {
       tft.setTextColor(ILI9341_WHITE);
       tft.setCursor(225, yPos + 32);

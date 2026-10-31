@@ -1,0 +1,231 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<estimacion parada="2277">
+  <solo_parada>
+    <bus>
+      <linea>C1</linea>
+      <destino><![CDATA[Cntr.Històric]]></destino>
+      <minutos>Pròxim</minutos>
+      <horaLlegada/>
+      <error/>
+    </bus>
+    <info/>
+    <bus>
+      <linea>62</linea>
+      <destino><![CDATA[Benimàmet]]></destino>
+      <minutos>2 min.</minutos>
+      <horaLlegada/>
+      <error/>
+    </bus>
+    <info/>
+    <bus>
+      <linea>9</linea>
+      <destino><![CDATA[Forn d'Alcedo]]></destino>
+      <minutos>3 min.</minutos>
+      <horaLlegada/>
+      <error/>
+    </bus>
+    <info/>
+    <bus>
+      <linea>10</linea>
+      <destino><![CDATA[Sant Marcel.li]]></destino>
+      <minutos>5 min.</minutos>
+      <horaLlegada/>
+      <error/>
+    </bus>
+    <info/>
+    <bus>
+      <linea>70</linea>
+      <destino><![CDATA[La Fontsanta]]></destino>
+      <minutos>9 min.</minutos>
+      <horaLlegada/>
+      <error/>
+    </bus>
+    <info/>
+    <bus>
+      <linea>72</linea>
+      <destino><![CDATA[Sant Isidre]]></destino>
+      <minutos>9 min.</minutos>
+      <horaLlegada/>
+      <error/>
+    </bus>
+    <info/>
+    <bus>
+      <linea>11</linea>
+      <destino><![CDATA[Patraix]]></destino>
+      <minutos>10 min.</minutos>
+      <horaLlegada/>
+      <error/>
+    </bus>
+    <info/>
+    <bus>
+      <linea>C1</linea>
+      <destino><![CDATA[Cntr.Històric]]></destino>
+      <minutos>13 min.</minutos>
+      <horaLlegada/>
+      <error/>
+    </bus>
+    <info/>
+    <bus>
+      <linea>71</linea>
+      <destino><![CDATA[La Llum]]></destino>
+      <minutos>13 min.</minutos>
+      <horaLlegada/>
+      <error/>
+    </bus>
+    <info/>
+    <bus>
+      <linea>31</linea>
+      <destino><![CDATA[Est.J.Sorolla]]></destino>
+      <minutos>16 min.</minutos>
+      <horaLlegada/>
+      <error/>
+    </bus>
+    <info/>
+    <bus>
+      <linea>9</linea>
+      <destino><![CDATA[Forn d'Alcedo]]></destino>
+      <minutos>18 min.</minutos>
+      <horaLlegada/>
+      <error/>
+    </bus>
+    <info/>
+    <bus>
+      <linea>73</linea>
+      <destino><![CDATA[Sant Isidre]]></destino>
+      <minutos>20 min.</minutos>
+      <horaLlegada/>
+      <error/>
+    </bus>
+    <info/>
+    <bus>
+      <linea>7</linea>
+      <destino><![CDATA[Mercat Central]]></destino>
+      <minutos>21 min.</minutos>
+      <horaLlegada/>
+      <error/>
+    </bus>
+    <info/>
+    <bus>
+      <linea>60</linea>
+      <destino><![CDATA[Est.del Nord]]></destino>
+      <minutos>24 min.</minutos>
+      <horaLlegada/>
+      <error/>
+    </bus>
+    <info/>
+    <bus>
+      <linea>70</linea>
+      <destino><![CDATA[La Fontsanta]]></destino>
+      <minutos>24 min.</minutos>
+      <horaLlegada/>
+      <error/>
+    </bus>
+    <info/>
+    <bus>
+      <linea>28</linea>
+      <destino><![CDATA[C.Art.Faller]]></destino>
+      <minutos>27 min.</minutos>
+      <horaLlegada/>
+      <error/>
+    </bus>
+    <info/>
+    <bus>
+      <linea>72</linea>
+      <destino><![CDATA[Sant Isidre]]></destino>
+      <minutos>28 min.</minutos>
+      <horaLlegada/>
+      <error/>
+    </bus>
+    <info/>
+    <bus>
+      <linea>59</linea>
+      <destino><![CDATA[Sociòpolis]]></destino>
+      <minutos>29 min.</minutos>
+      <horaLlegada/>
+      <error/>
+    </bus>
+    <info/>
+    <bus>
+      <linea>62</linea>
+      <destino><![CDATA[Benimàmet]]></destino>
+      <minutos>30 min.</minutos>
+      <horaLlegada/>
+      <error/>
+    </bus>
+    <info/>
+    <bus>
+      <linea>11</linea>
+      <destino><![CDATA[Patraix]]></destino>
+      <minutos>33 min.</minutos>
+      <horaLlegada/>
+      <error/>
+    </bus>
+    <info/>
+    <bus>
+      <linea>10</linea>
+      <destino><![CDATA[Sant Marcel.li]]></destino>
+      <minutos>35 min.</minutos>
+      <horaLlegada/>
+      <error/>
+    </bus>
+    <info/>
+    <bus>
+      <linea>73</linea>
+      <destino><![CDATA[Sant Isidre]]></destino>
+      <minutos>35 min.</minutos>
+      <horaLlegada/>
+      <error/>
+    </bus>
+    <info/>
+    <bus>
+      <linea>71</linea>
+      <destino><![CDATA[La Llum]]></destino>
+      <minutos>35 min.</minutos>
+      <horaLlegada/>
+      <error/>
+    </bus>
+    <info/>
+    <bus>
+      <linea>60</linea>
+      <destino><![CDATA[Est.del Nord]]></destino>
+      <minutos>45 min.</minutos>
+      <horaLlegada/>
+      <error/>
+    </bus>
+    <info/>
+    <bus>
+      <linea>7</linea>
+      <destino><![CDATA[Mercat Central]]></destino>
+      <minutos>47 min.</minutos>
+      <horaLlegada/>
+      <error/>
+    </bus>
+    <info/>
+    <bus>
+      <linea>28</linea>
+      <destino><![CDATA[C.Art.Faller]]></destino>
+      <minutos>50 min.</minutos>
+      <horaLlegada/>
+      <error/>
+    </bus>
+    <info/>
+    <bus>
+      <linea>59</linea>
+      <destino><![CDATA[Sociòpolis]]></destino>
+      <minutos>56 min.</minutos>
+      <horaLlegada/>
+      <error/>
+    </bus>
+    <info/>
+    <bus>
+      <linea>31</linea>
+      <destino><![CDATA[Est.J.Sorolla]]></destino>
+      <minutos>08:40:22</minutos>
+      <horaLlegada/>
+      <error/>
+    </bus>
+    <info/>
+  </solo_parada>
+  <parada_linea/>
+  <info/>
+</estimacion>

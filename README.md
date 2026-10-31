@@ -19,10 +19,10 @@ El sistema tiene tres piezas: un **ESP32** con pantalla de 2,8" montado en una c
 **Lo más destacable**
 
 - **La misma fuente que la app oficial.** Consulta directamente el SAE de la EMT (el sistema de seguimiento por GPS de los autobuses), sin librerías intermedias.
-- **Distingue lo real de lo previsto.** Las estimaciones en tiempo real se muestran en blanco; las horas teóricas, en gris; "Próximo" se convierte en *Llegando*.
+- **Distingue lo real de lo previsto.** Las estimaciones en tiempo real se muestran en blanco; las horas teóricas, en gris; "Pròxim" se convierte en *Llegando* y las líneas desviadas se marcan en naranja.
 - **Aviso de salida por voz.** Calcula `llegada del bus − minutos andando` y avisa en el último minuto, con voz neuronal offline (Piper TTS).
 - **Robusto.** Caché compartida de 15 s; si la EMT no responde, muestra el último dato bueno y lo marca.
-- **Seguro por diseño.** Lista de paradas permitidas, sin CORS, servicio aislado con systemd y 22 tests automáticos (10 de seguridad). Ver [docs/SEGURIDAD.md](docs/SEGURIDAD.md).
+- **Seguro por diseño.** Lista de paradas permitidas, sin CORS, servicio aislado con systemd y 25 tests automáticos (10 de seguridad). Ver [docs/SEGURIDAD.md](docs/SEGURIDAD.md).
 
 ---
 
@@ -54,9 +54,22 @@ El SAE responde XML. El campo `minutos` significa cosas distintas según el caso
 | `minutos` en el XML | Significado | En la pantalla |
 |---|---|---|
 | `37 min.` | Estimación en tiempo real | **37 min** (blanco) |
-| `Próximo` | El bus está llegando | **Llegando** (verde) |
+| `Pròxim` (en valenciano) | El bus está llegando | **Llegando** (verde) |
 | `02:57:45` | Hora prevista, sin GPS (2.º bus de la línea, nocturnos…) | 02:57 (gris) |
 | vacío + `<error>SENSE ESTIMACIONS</error>` | Sin servicio | *Sin servicio ahora* |
+| `LÍNIA DESVIADA` | Línea desviada por obras o actos | **Desviada** (naranja) |
+
+### Precisión medida
+
+El 31/10/2026, de 07:38 a 07:47, se consultaron 8 paradas cada 30 s (136 peticiones, 0 errores, 70-150 ms por respuesta) y se siguió cada autobús hasta que pasó por la parada:
+
+| Medida | Resultado |
+|---|---|
+| Error medio de la estimación ("N min.") | **0,9 min** (sesgo +0,2 min) |
+| Estimaciones dentro de ±1 min | **60 %**, con una resolución de 1 min en origen |
+| "Pròxim" | el bus pasa de media **1,1 min** después (máximo 3,2) |
+
+Conclusión: las estimaciones del SAE son fiables, así que el servidor las usa tal cual. Una corrección de +0,5 min por el truncado de los minutos **no mejoraba** el resultado y se descartó. Es una muestra pequeña: la hoja de ruta incluye medirlo de forma continua.
 
 ### Aviso de salida
 
@@ -214,7 +227,7 @@ Abre `http://<ip-del-servidor>:5000` en el móvil y añádela a la pantalla de i
 cd server && pip install pytest && python -m pytest -v tests
 ```
 
-- **Parser del SAE:** respuestas reales de la EMT, "Próximo", horas previstas y cruce de medianoche.
+- **Parser del SAE:** respuestas reales de la EMT ("Pròxim", horas previstas, líneas desviadas, una parada con 28 buses) y cruce de medianoche.
 - **Avisos:** franjas, silencio nocturno, no repetir el mismo bus, filtro de líneas y WAV válido.
 - **Seguridad:** paradas no permitidas, CORS, cabeceras, errores sin detalles internos, IDs de audio, rutas de API y bomba XML.
 
@@ -227,7 +240,7 @@ La [CI](.github/workflows/ci.yml) ejecuta los tests, compila la web y **compila 
 │   ├── app.py           API, parser del SAE, caché y web estática
 │   ├── avisos.py        Motor de avisos de salida y voz
 │   ├── config.py        Tus paradas y avisos
-│   └── tests/           22 tests + respuestas reales de la EMT
+│   └── tests/           25 tests + respuestas reales de la EMT
 ├── firmware/
 │   └── dashboard_emt/   Sketch del ESP32 (pantalla, táctil, audio I2S)
 ├── frontend/            Web React + Tailwind (Vite)

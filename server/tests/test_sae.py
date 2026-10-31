@@ -52,3 +52,27 @@ def test_hora_pasada_medianoche():
            "<minutos/><horaLlegada>00:10</horaLlegada><error/></bus></solo_parada></estimacion>")
     (b,), _ = app.parsear_sae(xml.encode(), noche)
     assert 0 < b["llega_a"] - noche <= 25 * 60
+
+
+def test_proxim_en_valenciano_y_parada_grande():
+    """Respuesta real de la parada 2277 (Xàtiva) a las 07:38: 'Pròxim', no 'Próximo'."""
+    llegadas, avisos = app.parsear_sae(leer("sae_2277_proxim.xml"), AHORA)
+    assert avisos == [] and len(llegadas) == 28
+    primero = llegadas[0]
+    assert (primero["linea"], primero["llegando"], primero["texto"]) == ("C1", True, "0")
+    assert primero["destino"] == "Cntr.Històric"
+    assert any(b["destino"] == "Sant Marcel.li" for b in llegadas)
+    ultimo = llegadas[-1]
+    assert ultimo["linea"] == "31" and ultimo["hora"] == "08:40" and not ultimo["tiempo_real"]
+    # Ordenadas por llegada
+    assert [b["llega_a"] for b in llegadas] == sorted(b["llega_a"] for b in llegadas)
+
+
+def test_linea_desviada():
+    """Respuesta real de la parada 2260 a las 07:47: la 81 venía como 'LÍNIA DESVIADA'."""
+    llegadas, avisos = app.parsear_sae(leer("sae_2260_desviada.xml"), AHORA)
+    assert avisos == [] and len(llegadas) == 2
+    c1, l81 = llegadas                       # la desviada, sin hora, va al final
+    assert c1["linea"] == "C1" and c1["minutos"] == 43
+    assert l81["linea"] == "81" and l81["desviada"] is True and l81["texto"] == "Desviada"
+    assert l81["tiempo_real"] is False and l81["llega_a"] is None

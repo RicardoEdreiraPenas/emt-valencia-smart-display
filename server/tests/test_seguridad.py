@@ -88,3 +88,8 @@ def test_api_desconocida_no_devuelve_la_web(tmp_path, monkeypatch):
     assert c.get("/cualquier/ruta").status_code == 200          # rutas de la SPA
     assert c.get("/api/no-existe").status_code == 404
     assert c.get("/api/audio/../../etc/passwd.wav").status_code == 404
+
+
+def test_temperatura_redondeo_real():
+    """Dato real de Open-Meteo del 31/10/2026 07:30: 16.5 C."""
+    assert app._redondear(16.5) == 17 and app._redondear(-0.5) == 0 and app._redondear(16.4) == 16

@@ -111,6 +111,8 @@ export default function DashboardEMT() {
               <div className="ml-auto pl-3 text-3xl font-bold whitespace-nowrap">
                 {bus.llegando ? (
                   <span className="text-[#30d158]">Llegando</span>
+                ) : bus.desviada ? (
+                  <span className="text-[#ff9f0a] text-2xl">Desviada</span>
                 ) : bus.tiempo_real ? (
                   <span>
                     {bus.minutos} <span className="text-[#8e8e93] text-xl">min</span>

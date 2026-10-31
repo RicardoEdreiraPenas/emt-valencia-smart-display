@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<estimacion parada="2260">
+  <solo_parada>
+    <bus>
+      <linea>C1</linea>
+      <destino><![CDATA[Cntr.Històric]]></destino>
+      <minutos>43 min.</minutos>
+      <horaLlegada/>
+      <error/>
+    </bus>
+    <info/>
+    <bus>
+      <linea>81</linea>
+      <destino><![CDATA[Est.del Nord]]></destino>
+      <minutos>LÍNIA DESVIADA</minutos>
+      <horaLlegada/>
+      <error/>
+    </bus>
+    <info/>
+  </solo_parada>
+  <parada_linea/>
+  <info/>
+</estimacion>
