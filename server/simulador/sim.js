@@ -373,6 +373,8 @@
     708: [['19', 'La Malva-rosa', 12, 3], ['93', 'Pass. Marítim', 15, 8], ['70', 'Alboraia', 20, 1]],
     1676: [['7', 'Mercat Central', 13, 5], ['27', 'Mercat Central', 18, 11], ['81', 'Est.del Nord', 22, 2]],
     2080: [['8', 'Pta.de la Mar', 16, 6], ['C1', 'Cntr.Històric', 10, 4], ['40', 'Universitats', 14, 9]],
+    1619: [['4', 'Natzaret', 12, 4], ['92', 'La Malva-rosa', 11, 7], ['30', 'Natzaret', 17, 13]],
+    697: [['73', 'Est.del Nord', 12, 1], ['62', 'Est.del Nord', 15, 3], ['64', 'Hosp. La Fe', 14, 9], ['C2', 'Av. Aragó', 13, 6]],
   };
   const PARADAS_DEMO = Object.keys(RED_DEMO).map(Number);
 
@@ -523,7 +525,7 @@
   // (proxy-demo/, Cloudflare Worker con caché de 20 s) y tiempo real de
   // Open-Meteo. Misma normalización y mismos avisos que server/app.py.
   const PROXY = 'https://emt-demo-proxy.1ricardox.workers.dev';
-  const PARADAS_LIVE = [708, 1676, 2080];
+  const PARADAS_LIVE = [708, 1676, 2080, 1619, 697];
 
   function iconoWmo(c) {
     c = Number(c);

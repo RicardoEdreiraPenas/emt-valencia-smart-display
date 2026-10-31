@@ -54,7 +54,7 @@ El sistema tiene tres piezas: un **ESP32** con pantalla de 2,8" montado en una c
 
 Un simulador en el navegador para probar el sistema **sin montar el hardware**. La pantalla se dibuja con el mismo código que el firmware, traducido línea a línea: coordenadas, colores, textos, refrescos cada 20 s, banner de 60 s y validaciones. El táctil funciona haciendo clic a la izquierda o a la derecha.
 
-- **EMT en directo** (el modo de la [demo publicada](https://ricardoedreirapenas.github.io/emt-valencia-smart-display/)). Llegadas reales de tres paradas del centro de València, tiempo real de Open-Meteo y avisos de salida sobre datos reales. Como la EMT no deja que otras webs le pidan datos, pasan por un intermediario propio ([`proxy-demo/`](proxy-demo/), un Cloudflare Worker) que solo atiende esas tres paradas y guarda cada respuesta 20 s: la EMT recibe como mucho 3 consultas cada 20 s, haya los visitantes que haya.
+- **EMT en directo** (el modo de la [demo publicada](https://ricardoedreirapenas.github.io/emt-valencia-smart-display/)). Llegadas reales de cinco paradas de València, tiempo real de Open-Meteo y avisos de salida sobre datos reales. Como la EMT no deja que otras webs le pidan datos, pasan por un intermediario propio ([`proxy-demo/`](proxy-demo/), un Cloudflare Worker) que solo atiende esas cinco paradas y guarda cada respuesta 20 s: la EMT recibe como mucho 5 consultas cada 20 s, haya los visitantes que haya.
 - **Tu servidor.** Abre `http://<ip-del-servidor>:5000/simulador/` y usa tu propio servidor, tus paradas y tu configuración, como el ESP32.
 - **Demo simulada.** Servidor simulado (misma lógica que `app.py` y `avisos.py`) con el tiempo acelerable (×10, ×60) y escenarios a un clic: bus llegando, sin servicio, línea desviada, EMT caída, servidor apagado, WiFi caído, aviso de salida con voz y los siete iconos del tiempo, de día y de noche.
 
@@ -182,7 +182,7 @@ Para dejarlo como servicio que arranca solo y está aislado del sistema, sigue l
 Todo lo personal está en [`server/config.py`](server/config.py):
 
 ```python
-PARADAS = [708, 1676, 2080]          # las que muestra la pantalla
+PARADAS = [708, 1676, 2080, 1619, 697]  # las que muestra la pantalla
 CLIMA = {"lat": 39.4697, "lon": -0.3774}
 
 REGLAS = [                            # avisos de salida
@@ -297,7 +297,7 @@ La [CI](.github/workflows/ci.yml) ejecuta los tests, compila la web y **compila 
 
 - Datos de llegadas: **EMT València**. El endpoint del SAE no está documentado públicamente; este proyecto es **no oficial**, para uso personal, y limita las consultas con caché. El formato del endpoint se documentó primero en [ElEd0/EMTValencia-API](https://github.com/ElEd0/EMTValencia-API).
 - Datos meteorológicos: [Open-Meteo](https://open-meteo.com/) (CC BY 4.0).
-- La demo pública consulta la EMT a través de un intermediario con caché, solo para tres paradas del centro, para mantener la carga al mínimo.
+- La demo pública consulta la EMT a través de un intermediario con caché, solo para cinco paradas, para mantener la carga al mínimo.
 - Voz: [Piper TTS](https://github.com/OHF-Voice/piper1-gpl).
 
 Proyecto de [Ricardo Edreira Penas](https://github.com/RicardoEdreiraPenas) · Licencia [MIT](LICENSE).

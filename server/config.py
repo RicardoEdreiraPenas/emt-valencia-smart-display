@@ -8,7 +8,7 @@ un ejemplo con paradas del centro de València.
 # Paradas que muestra la pantalla (en este orden). El servidor solo consulta
 # estas y las de REGLAS: cualquier otra devuelve 404 sin tocar la EMT.
 # El número de parada aparece en el poste de la parada y en la app de la EMT.
-PARADAS = [708, 1676, 2080]
+PARADAS = [708, 1676, 2080, 1619, 697]
 
 # Ubicación para el tiempo (Open-Meteo)
 CLIMA = {"lat": 39.4697, "lon": -0.3774}
