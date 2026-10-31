@@ -16,8 +16,8 @@ jobs:
       run:
         working-directory: server
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -32,8 +32,8 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
           cache: npm
@@ -43,9 +43,10 @@ jobs:
 
   firmware:
     name: Firmware ESP32 (compilación)
-    runs-on: ubuntu-latest
+    # compile-sketches instala Python 3.12.4, que no existe en Ubuntu 26.04
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Credenciales de ejemplo para compilar
         run: cp firmware/dashboard_emt/secrets.example.h firmware/dashboard_emt/secrets.h
       - uses: arduino/compile-sketches@v1
