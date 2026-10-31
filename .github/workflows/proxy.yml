@@ -1,0 +1,52 @@
+# Publica el intermediario de la demo (proxy-demo/) en Cloudflare Workers,
+# igual que albal-tienda: con un token guardado como secreto del repo.
+#
+# Secretos necesarios (GitHub → Settings → Secrets and variables → Actions):
+#   CLOUDFLARE_API_TOKEN   token con la plantilla "Edit Cloudflare Workers"
+#   CLOUDFLARE_ACCOUNT_ID  ID de la cuenta (panel de Cloudflare → Workers & Pages)
+# Sin ellos, el flujo solo ejecuta los tests y no publica.
+name: Intermediario de la demo
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "proxy-demo/**"
+      - ".github/workflows/proxy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publicar:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: proxy-demo
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Tests
+        run: npm test
+
+      - name: ¿Hay token?
+        id: token
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: echo "hay=$([ -n "$TOKEN" ] && echo si || echo no)" >> "$GITHUB_OUTPUT"
+
+      - name: Publicar en Cloudflare
+        if: steps.token.outputs.hay == 'si'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: proxy-demo
+          command: deploy
+
+      - name: Sin token
+        if: steps.token.outputs.hay != 'si'
+        run: echo "::notice::Falta el secreto CLOUDFLARE_API_TOKEN; el intermediario no se ha publicado."
