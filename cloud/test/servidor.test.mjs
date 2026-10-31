@@ -72,7 +72,7 @@ test('parada: mismo JSON que el servidor en Python y caché de 15 s', async () =
 
 test('solo las paradas configuradas (y las de los avisos): las demás, 404 sin tocar la EMT', async () => {
   const { pedir, llamadas } = montar();
-  for (const ruta of ['/api/parada/9999', '/api/parada/1902', '/api/parada/abc', '/api/parada/708/x']) {
+  for (const ruta of ['/api/parada/9999', '/api/parada/4321', '/api/parada/abc', '/api/parada/708/x']) {
     assert.equal((await pedir(ruta)).status, 404, ruta);
   }
   assert.equal(llamadas.emt, 0);

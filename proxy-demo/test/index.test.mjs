@@ -11,7 +11,7 @@ const pedir = (ruta, init = {}) => worker.fetch(new Request(`https://x.workers.d
 }));
 
 test('solo paradas de la demo', async () => {
-  assert.equal((await pedir('/sae/1902')).status, 404);
+  assert.equal((await pedir('/sae/4321')).status, 404);
   assert.equal((await pedir('/sae/abc')).status, 404);
   assert.equal((await pedir('/otra')).status, 404);
 });
