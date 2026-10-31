@@ -10,6 +10,10 @@
   <img src="https://img.shields.io/badge/licencia-MIT-informational" alt="Licencia MIT">
 </p>
 
+<p align="center">
+  <a href="https://ricardoedreirapenas.github.io/emt-valencia-smart-display/"><img src="https://img.shields.io/badge/%E2%96%B6%20Probar%20la%20demo-gemelo%20digital-d2232a?style=for-the-badge" alt="Probar la demo: gemelo digital en el navegador"></a>
+</p>
+
 # EMT València Smart Display
 
 Pantalla táctil que muestra **en tiempo real** cuándo llegan los autobuses de la EMT de València a tus paradas, con el tiempo, la probabilidad de lluvia y la hora. Cuando toca salir de casa para no perder el bus, **lo dice en voz alta**.
@@ -46,10 +50,12 @@ El sistema tiene tres piezas: un **ESP32** con pantalla de 2,8" montado en una c
 
 <p align="center"><img src="docs/img/gemelo.png" alt="Gemelo digital: la pantalla simulada con lluvia y una línea desviada, junto al panel de escenarios" width="100%"></p>
 
+**[▶ Probar la demo](https://ricardoedreirapenas.github.io/emt-valencia-smart-display/)**, sin instalar nada.
+
 Un simulador en el navegador para probar el sistema **sin montar el hardware**. La pantalla se dibuja con el mismo código que el firmware, traducido línea a línea: coordenadas, colores, textos, refrescos cada 20 s, banner de 60 s y validaciones. El táctil funciona haciendo clic a la izquierda o a la derecha.
 
 - **Modo real.** Abre `http://<ip-del-servidor>:5000/simulador/` y usa tu servidor y los datos de la EMT, como el ESP32.
-- **Modo demo.** Servidor simulado (misma lógica que `app.py` y `avisos.py`) con el tiempo acelerable (×10, ×60) y escenarios a un clic: bus llegando, sin servicio, línea desviada, EMT caída, servidor apagado, WiFi caído, aviso de salida con voz y los siete iconos del tiempo, de día y de noche.
+- **Modo demo** (el de la [demo publicada](https://ricardoedreirapenas.github.io/emt-valencia-smart-display/)). Servidor simulado (misma lógica que `app.py` y `avisos.py`) con el tiempo acelerable (×10, ×60) y escenarios a un clic: bus llegando, sin servicio, línea desviada, EMT caída, servidor apagado, WiFi caído, aviso de salida con voz y los siete iconos del tiempo, de día y de noche.
 
 **Lo que encontró antes de montar nada**, ya corregido en el firmware y el servidor:
 

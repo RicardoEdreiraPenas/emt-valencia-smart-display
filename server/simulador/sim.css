@@ -42,7 +42,10 @@ button, input, select { font: inherit; color: inherit; }
 .top { max-width: 1180px; margin: 0 auto 22px; display: flex; flex-wrap: wrap; align-items: end; gap: 8px 32px; }
 .eyebrow { font: 600 12px/1 var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
 h1 { font: 700 clamp(30px, 5vw, 44px)/1 var(--font-display); letter-spacing: .01em; margin: 6px 0 0; text-wrap: balance; }
-.lede { margin: 0; max-width: 58ch; color: var(--muted); flex: 1 1 340px; }
+.intro { flex: 1 1 340px; display: grid; gap: 8px; min-width: 0; }
+.lede { margin: 0; max-width: 58ch; color: var(--muted); }
+.repo { width: fit-content; font-weight: 600; color: var(--accent); text-decoration: none; border-bottom: 1px solid currentColor; }
+.repo:hover { border-bottom-width: 2px; }
 
 .bench { max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 32px; align-items: start; }
 @media (max-width: 900px) { .bench { grid-template-columns: minmax(0, 1fr); } }

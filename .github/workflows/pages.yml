@@ -1,0 +1,45 @@
+name: Demo en GitHub Pages
+
+# Publica el gemelo digital (server/simulador) como demo pública.
+# En GitHub Pages no hay servidor, así que la página arranca sola en modo demo.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "server/simulador/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publicar:
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Preparar la demo
+        run: |
+          mkdir -p _site
+          cp server/simulador/index.html server/simulador/sim.css server/simulador/sim.js _site/
+          # Tipografías de Google Fonts (en el servidor de casa no se cargan por su CSP)
+          sed -i 's#<link rel="stylesheet" href="sim.css">#<link rel="preconnect" href="https://fonts.googleapis.com">\n<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700\&family=IBM+Plex+Mono:wght@400;600\&family=IBM+Plex+Sans:wght@400;600\&display=swap">\n<link rel="stylesheet" href="sim.css">#' _site/index.html
+          touch _site/.nojekyll
+          ls -la _site
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deploy
+        uses: actions/deploy-pages@v4
