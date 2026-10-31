@@ -1,0 +1,17 @@
+# Credenciales del ESP32 (nunca al repositorio)
+firmware/dashboard_emt/secrets.h
+
+# Generados
+server/web/
+server/voces/
+frontend/node_modules/
+frontend/dist/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# Sistema
+.DS_Store

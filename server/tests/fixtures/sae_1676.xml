@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<estimacion parada="1676">
+  <solo_parada>
+    <bus>
+      <linea>7</linea>
+      <destino><![CDATA[Mercat Central]]></destino>
+      <minutos>26 min.</minutos>
+      <horaLlegada/>
+      <error/>
+    </bus>
+    <info/>
+  </solo_parada>
+  <parada_linea/>
+  <info/>
+</estimacion>

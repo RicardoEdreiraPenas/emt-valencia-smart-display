@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<estimacion parada="708">
+  <solo_parada>
+    <bus>
+      <linea>19</linea>
+      <destino><![CDATA[La Malva-rosa]]></destino>
+      <minutos>37 min.</minutos>
+      <horaLlegada/>
+      <error/>
+    </bus>
+    <info/>
+    <bus>
+      <linea>19</linea>
+      <destino><![CDATA[La Malva-rosa]]></destino>
+      <minutos>02:57:45</minutos>
+      <horaLlegada/>
+      <error/>
+    </bus>
+    <info/>
+  </solo_parada>
+  <parada_linea/>
+  <info/>
+</estimacion>
