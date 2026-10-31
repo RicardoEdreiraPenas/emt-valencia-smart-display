@@ -48,7 +48,7 @@ Se elige en [Puesta en marcha](#1-servidor-elige-a-o-b). Las dos opciones pasan 
 | Pantalla del dispositivo | Aviso de salida |
 |:---:|:---:|
 | <img src="docs/img/dispositivo.png" alt="Pantalla con las próximas llegadas" width="100%"> | <img src="docs/img/dispositivo-aviso.png" alt="Banner verde SAL YA" width="100%"> |
-| Próximas llegadas de la parada. Se cambia de parada tocando a izquierda o derecha. | Banner verde y voz: *"Sal ya. La 93 hacia Pass. Marítim llega en 6 minutos."* |
+| Próximas llegadas de la parada. Se cambia de parada tocando a izquierda o derecha. | Banner verde abajo, en el sitio de la 3.ª llegada (la parada, el tiempo y la hora siguen a la vista), y voz: *"Sal ya. La 93 hacia Pass. Marítim llega en 6 minutos."* |
 
 | Web en el móvil | Sin servicio |
 |:---:|:---:|
@@ -76,7 +76,7 @@ Un simulador en el navegador para probar el sistema **sin montar el hardware**. 
 |---|---|---|
 | Línea desviada en una parada con 3+ buses | La desviada iba al final de la lista y la pantalla solo muestra 3 tarjetas: nunca se veía | El servidor la coloca en la 3.ª posición (con test) |
 | Se cae el WiFi | La pantalla seguía mostrando minutos de hace rato sin avisar | Aviso **Sin WiFi** en rojo y datos frescos al reconectar |
-| Termina un aviso sin WiFi | El banner verde quedaba a medio borrar | Se redibuja la cabecera entera |
+| Termina un aviso sin WiFi | El banner verde quedaba a medio borrar | Se borra el hueco del aviso (hoy el banner va abajo, en el sitio de la 3.ª llegada) |
 
 
 <p align="center"><img src="docs/img/arquitectura.png" alt="Diagrama de arquitectura" width="100%"></p>

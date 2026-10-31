@@ -125,7 +125,7 @@
     }
     drawIconoClima(icono, noche) {
       const X = 110, Y = 17;
-      this.rect(98, 2, 26, 31, C.BG);
+      this.rect(96, 0, 30, 35, C.BG);   // los rayos del sol llegan a x = 97
       switch (icono) {
         case 'despejado': noche ? this.luna(X, Y, 6) : this.sol(X, Y, 5); break;
         case 'parcial': noche ? this.luna(X - 5, Y - 5, 5) : this.sol(X - 5, Y - 5, 4); this.nube(X + 2, Y + 3, C.CLOUD); break;
@@ -153,18 +153,21 @@
     mensajeCentral(t, c) { this.rect(0, 0, 320, 240, C.BG); this.text(10, 110, t, c); }
     avisoActivo() { return this.avisoHasta !== 0 && Clock.now() < this.avisoHasta; }
 
-    drawBanner() { this.rect(0, 0, 320, 35, C.GREEN); this.text(10, 24, this.avisoTexto, C.BLACK); }
+    // El aviso ocupa el hueco de la 3.ª tarjeta, abajo (BANNER_Y = 165)
+    drawBanner() {
+      this.rrect(10, 165, 300, 52, 12, C.GREEN);
+      this.text(160 - this.width(this.avisoTexto) / 2, 197, this.avisoTexto, C.BLACK);
+    }
+    borrarBanner() { this.rect(0, 163, 320, 56, C.BG); }
     drawSinWifi(cabeceraEntera = false) {
-      if (this.avisoActivo()) return;
       if (cabeceraEntera) {
         this.rect(0, 0, 320, 35, C.BG);
         this.text(10, 24, 'EMT ' + this.paradas[this.paradaActual], C.WHITE);
         this.drawClock();
       }
-      this.rect(98, 0, 152, 35, C.BG); this.text(130, 24, 'Sin WiFi', C.RED);
+      this.rect(96, 0, 154, 35, C.BG); this.text(130, 24, 'Sin WiFi', C.RED);
     }
     drawLoading() {
-      if (this.avisoActivo()) return;
       this.rect(0, 0, 250, 35, C.BG); this.text(10, 24, 'Actualizando...', C.ACCENT);
     }
     drawPagination() {
@@ -173,11 +176,10 @@
       for (let i = 0; i < n; i++) this.circle(startX + i * 16, 232, 4, i === this.paradaActual ? C.WHITE : C.DIM);
     }
     drawClock() {
-      if (this.avisoActivo() || this.state === 'boot') return;
+      if (this.state === 'boot') return;
       this.rect(250, 0, 70, 35, C.BG); this.text(255, 24, hhmm(Clock.now()), C.WHITE);
     }
     drawHeader(doc) {
-      if (this.avisoActivo()) { this.drawBanner(); return; }
       this.rect(0, 0, 250, 35, C.BG);
       this.text(10, 24, 'EMT ' + parseInt(doc.parada, 10), C.WHITE);
       this.text(130, 24, String(doc.clima ?? ''), C.ACCENT);
@@ -192,10 +194,11 @@
         this.rrect(10, 50, 300, 60, 12, C.CARD);
         const av = Array.isArray(doc.avisos) ? doc.avisos : [];
         this.text(25, 85, av.length > 0 && av[0] === 'SENSE ESTIMACIONS' ? 'Sin servicio ahora' : 'Sin autobuses cercanos', C.DIM);
+        if (this.avisoActivo()) this.drawBanner();
         return;
       }
       let yPos = 45;
-      for (const bus of llegadas.slice(0, 3)) {
+      for (const bus of llegadas.slice(0, this.avisoActivo() ? 2 : 3)) {   // con aviso, la 3.ª es el banner
         const linea = String(bus.linea ?? '');
         let destino = sinAcentos(bus.destino || '');
         const texto = bus.texto ?? '?';
@@ -213,6 +216,7 @@
         else this.text(240, yPos + 32, texto, C.DIM);
         yPos += 60;
       }
+      if (this.avisoActivo()) this.drawBanner();
     }
 
     // ---- red
@@ -232,7 +236,8 @@
       }
       log(`GET /api/parada/${id} → ${r.code === -1 ? 'sin conexión' : r.code}`, 'bad');
       this.rect(0, 36, 320, 188, C.BG);
-      this.text(10, 110, r.code === 502 ? 'EMT no disponible' : 'Sin conexion al servidor', C.RED);
+      this.text(10, 110, r.code === 502 ? 'EMT no disponible' : r.code === 401 ? 'Clave incorrecta (API_KEY)' : 'Sin conexion al servidor', C.RED);
+      if (this.avisoActivo()) this.drawBanner();
       this.drawPagination();
     }
 
@@ -302,7 +307,8 @@
       if (this.wifi && now - this.lastAvisoCheck > FW.avisoDelay) { this.checkAviso(); this.lastAvisoCheck = now; }
       if (this.avisoHasta !== 0 && now >= this.avisoHasta) {
         this.avisoHasta = 0;
-        if (this.wifi) this.fetchBusData(); else this.drawSinWifi(true);
+        this.borrarBanner();
+        if (this.wifi) this.fetchBusData();
         this.lastBusUpdate = now;
       }
     }
@@ -376,7 +382,8 @@
     1619: [['4', 'Natzaret', 12, 4], ['92', 'La Malva-rosa', 11, 7], ['30', 'Natzaret', 17, 13]],
     697: [['73', 'Est.del Nord', 12, 1], ['62', 'Est.del Nord', 15, 3], ['64', 'Hosp. La Fe', 14, 9], ['C2', 'Av. Aragó', 13, 6]],
   };
-  const PARADAS_DEMO = Object.keys(RED_DEMO).map(Number);
+  // En orden explícito: Object.keys ordena las claves numéricas de menor a mayor
+  const PARADAS_DEMO = [708, 1676, 2080, 1619, 697];
 
   function hash(s) { let h = 2166136261; for (const c of s) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return (h >>> 0) / 4294967295; }
 

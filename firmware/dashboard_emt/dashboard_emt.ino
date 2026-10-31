@@ -218,12 +218,23 @@ void tareaAudio(void*) {
 
 bool avisoActivo() { return avisoHasta != 0 && millis() < avisoHasta; }
 
+// El aviso ocupa el hueco de la 3.ª tarjeta, abajo: la cabecera (parada,
+// tiempo, hora) y las dos primeras llegadas siguen a la vista.
+const int BANNER_Y = 165;
+
 void drawBanner() {
-  tft.fillRect(0, 0, 320, 35, COLOR_GREEN);
+  tft.fillRoundRect(10, BANNER_Y, 300, 52, 12, COLOR_GREEN);
   tft.setFont(&FreeSansBold9pt7b);
   tft.setTextColor(ILI9341_BLACK);
-  tft.setCursor(10, 24);
+  int16_t bx, by; uint16_t bw, bh;
+  tft.getTextBounds(avisoTexto, 0, 0, &bx, &by, &bw, &bh);
+  tft.setCursor(160 - bw / 2 - bx, BANNER_Y + 32);
   tft.print(avisoTexto);
+}
+
+// Al terminar el aviso: se borra el hueco (la tarjeta la repinta fetchBusData)
+void borrarBanner() {
+  tft.fillRect(0, BANNER_Y - 2, 320, 56, COLOR_BG);
 }
 
 void checkAviso() {
@@ -343,11 +354,11 @@ void loop() {
     lastAvisoCheck = millis();
   }
 
-  // Fin del banner: se recupera la cabecera normal
+  // Fin del aviso: vuelve la 3.ª tarjeta
   if (avisoHasta != 0 && millis() >= avisoHasta) {
     avisoHasta = 0;
+    borrarBanner();
     if (WiFi.status() == WL_CONNECTED) fetchBusData();
-    else drawSinWifi(true);
     lastBusUpdate = millis();
   }
 }
@@ -395,7 +406,7 @@ void iconoNube(int x, int y, uint16_t c) {
 
 void drawIconoClima(const char* icono, bool noche) {
   const int X = 110, Y = 17;
-  tft.fillRect(98, 2, 26, 31, COLOR_BG);
+  tft.fillRect(96, 0, 30, 35, COLOR_BG);   // los rayos del sol llegan a x = 97
   if (!strcmp(icono, "despejado")) {
     if (noche) iconoLuna(X, Y, 6); else iconoSol(X, Y, 5);
   } else if (!strcmp(icono, "parcial")) {
@@ -427,23 +438,21 @@ void drawIconoClima(const char* icono, bool noche) {
 }
 
 void drawSinWifi(bool cabeceraEntera) {
-  if (avisoActivo()) return;
   tft.setFont(&FreeSansBold9pt7b);
-  if (cabeceraEntera) {            // p. ej. al terminar un banner de aviso
+  if (cabeceraEntera) {            // repinta la cabecera entera
     tft.fillRect(0, 0, 320, 35, COLOR_BG);
     tft.setTextColor(ILI9341_WHITE);
     tft.setCursor(10, 24);
     tft.print("EMT " + String(paradas[paradaActual]));
     drawClock();
   }
-  tft.fillRect(98, 0, 152, 35, COLOR_BG);   // tapa también el icono del tiempo
+  tft.fillRect(96, 0, 154, 35, COLOR_BG);   // tapa también el icono del tiempo
   tft.setTextColor(COLOR_RED);
   tft.setCursor(130, 24);
   tft.print("Sin WiFi");
 }
 
 void drawLoading() {
-  if (avisoActivo()) return;
   tft.fillRect(0, 0, 250, 35, COLOR_BG);
   tft.setFont(&FreeSansBold9pt7b);
   tft.setTextColor(COLOR_ACCENT);
@@ -464,7 +473,6 @@ void drawPagination() {
 }
 
 void drawClock() {
-  if (avisoActivo()) return;
   struct tm timeinfo;
   if (!getLocalTime(&timeinfo, 100)) return;
 
@@ -479,7 +487,6 @@ void drawClock() {
 }
 
 void drawHeader(JsonDocument& doc) {
-  if (avisoActivo()) { drawBanner(); return; }
   tft.fillRect(0, 0, 250, 35, COLOR_BG);
   tft.setFont(&FreeSansBold9pt7b);
 
@@ -519,13 +526,15 @@ void drawBody(JsonDocument& doc) {
     } else {
       tft.print("Sin autobuses cercanos");
     }
+    if (avisoActivo()) drawBanner();
     return;
   }
 
   int yPos = 45;
   int count = 0;
+  const int maxTarjetas = avisoActivo() ? 2 : 3;   // con aviso, la 3.ª es el banner
   for (JsonObject bus : llegadas) {
-    if (count >= 3) break;
+    if (count >= maxTarjetas) break;
 
     String linea   = bus["linea"].as<String>();
     String destino = sinAcentos(bus["destino"] | "");
@@ -573,6 +582,7 @@ void drawBody(JsonDocument& doc) {
     yPos += 60;
     count++;
   }
+  if (avisoActivo()) drawBanner();
 }
 
 void fetchBusData() {
@@ -608,5 +618,6 @@ void fetchBusData() {
   tft.print(code == 502 ? "EMT no disponible"
             : code == 401 ? "Clave incorrecta (API_KEY)"
             : "Sin conexion al servidor");
+  if (avisoActivo()) drawBanner();
   drawPagination();
 }
