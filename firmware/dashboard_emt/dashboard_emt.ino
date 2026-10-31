@@ -1,5 +1,6 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
+#include <WiFiClientSecure.h>
 #include <ArduinoJson.h>          // v7
 #include <SPI.h>
 #include <Adafruit_GFX.h>
@@ -14,6 +15,12 @@
 // secrets.h -> WiFi (copia secrets.example.h; está en .gitignore)
 #include "config.h"
 #include "secrets.h"
+#include "certificados.h"         // raíces CA para HTTPS (opción B, Cloudflare)
+
+// Clave del servidor en Cloudflare (opción B). En secrets.h; vacía en casa.
+#ifndef API_KEY
+#define API_KEY ""
+#endif
 const String serverRoot = SERVER_ROOT;
 const String serverBase = serverRoot + "/api/parada/";
 
@@ -29,7 +36,7 @@ String ultimoAvisoId = "";
 String avisoTexto = "";
 unsigned long avisoHasta = 0;
 unsigned long lastAvisoCheck = 0;
-const unsigned long avisoDelay = 4000;     // consulta /api/aviso cada 4 s
+unsigned long avisoDelay = 4000;           // consulta /api/aviso cada 4 s (10 s por HTTPS)
 const unsigned long avisoBanner = 60000;   // banner verde durante 1 min
 
 int paradas[] = {PARADAS};
@@ -100,6 +107,26 @@ bool conectarWifi(unsigned long timeoutMs) {
 }
 
 // ===========================================================================
+// RED: http en casa (opción A) o https con clave (opción B, Cloudflare)
+// ===========================================================================
+
+// Prepara una petición al servidor. "tls" tiene que vivir mientras se use "http".
+bool abrir(HTTPClient& http, WiFiClientSecure& tls, const String& url) {
+  if (url.startsWith("https://")) {
+#ifdef TLS_SIN_VERIFICAR
+    tls.setInsecure();              // solo para pruebas: no comprueba el certificado
+#else
+    tls.setCACert(RAICES_CA);
+#endif
+    if (!http.begin(tls, url)) return false;
+  } else if (!http.begin(url)) {
+    return false;
+  }
+  if (strlen(API_KEY) > 0) http.addHeader("X-Clave", API_KEY);
+  return true;
+}
+
+// ===========================================================================
 // AUDIO: tarea en el núcleo 0, para que dibujar la pantalla no corte el sonido
 // ===========================================================================
 
@@ -113,8 +140,9 @@ uint16_t le16(const uint8_t* p) { return p[0] | (p[1] << 8); }
 
 bool reproducirWav(const char* url) {
   HTTPClient http;
+  WiFiClientSecure tls;
   http.setTimeout(8000);
-  http.begin(url);
+  if (!abrir(http, tls, String(url))) return false;
   if (http.GET() != 200) { http.end(); return false; }
 
   WiFiClient* s = http.getStreamPtr();
@@ -200,8 +228,9 @@ void drawBanner() {
 
 void checkAviso() {
   HTTPClient http;
-  http.setTimeout(3000);
-  http.begin(serverRoot + "/api/aviso");
+  WiFiClientSecure tls;
+  http.setTimeout(5000);
+  if (!abrir(http, tls, serverRoot + "/api/aviso")) return;
   int code = http.GET();
   if (code != 200) { http.end(); return; }   // 204 = no hay aviso
   String payload = http.getString();
@@ -234,7 +263,11 @@ void setup() {
   Serial.begin(115200);
 
   colaAudio = xQueueCreate(3, 160);
-  xTaskCreatePinnedToCore(tareaAudio, "audio", 8192, NULL, 2, NULL, 0);
+  // 12 KB de pila: la conexión HTTPS (opción B) necesita más que la de casa
+  xTaskCreatePinnedToCore(tareaAudio, "audio", 12288, NULL, 2, NULL, 0);
+  // Por HTTPS cada consulta cuesta más (cifrado): el aviso se pide cada 10 s,
+  // de sobra para una ventana de aviso de 90 s
+  if (serverRoot.startsWith("https://")) avisoDelay = 10000;
 
   tft.begin();
   tft.setRotation(1);
@@ -544,9 +577,10 @@ void drawBody(JsonDocument& doc) {
 
 void fetchBusData() {
   HTTPClient http;
-  http.setTimeout(6000);
+  WiFiClientSecure tls;
+  http.setTimeout(8000);
   String url = serverBase + String(paradas[paradaActual]);
-  http.begin(url);
+  abrir(http, tls, url);
   int code = http.GET();
 
   if (code == 200) {
@@ -571,6 +605,8 @@ void fetchBusData() {
   tft.setFont(&FreeSansBold9pt7b);
   tft.setTextColor(COLOR_RED);
   tft.setCursor(10, 110);
-  tft.print(code == 502 ? "EMT no disponible" : "Sin conexion al servidor");
+  tft.print(code == 502 ? "EMT no disponible"
+            : code == 401 ? "Clave incorrecta (API_KEY)"
+            : "Sin conexion al servidor");
   drawPagination();
 }

@@ -41,14 +41,42 @@ jobs:
       - run: npm ci
       - run: npm run build
 
+  cloud:
+    name: Servidor en Cloudflare (tests y paridad)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cloud
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Tests (incluye la paridad con el servidor en Python)
+        run: npm test
+      - name: Comprobar que el Worker se empaqueta
+        run: |
+          npm run preparar -- --sin-web
+          npx -y wrangler@4 deploy --dry-run --outdir dist
+
   firmware:
-    name: Firmware ESP32 (compilación)
+    name: Firmware ESP32 (opción ${{ matrix.opcion }})
     # compile-sketches instala Python 3.12.4, que no existe en Ubuntu 26.04
     runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        opcion: [A, B]
     steps:
       - uses: actions/checkout@v5
       - name: Credenciales de ejemplo para compilar
         run: cp firmware/dashboard_emt/secrets.example.h firmware/dashboard_emt/secrets.h
+      - name: "Opción B: HTTPS y clave"
+        if: matrix.opcion == 'B'
+        working-directory: firmware/dashboard_emt
+        run: |
+          sed -i 's|^#define SERVER_ROOT .*|#define SERVER_ROOT "https://emt-smart-display.ejemplo.workers.dev"|' config.h
+          sed -i 's|^#define API_KEY .*|#define API_KEY "clave-de-ejemplo"|' secrets.h
+          grep -n "SERVER_ROOT\|API_KEY" config.h secrets.h
       - uses: arduino/compile-sketches@v1
         with:
           fqbn: esp32:esp32:esp32
