@@ -81,6 +81,10 @@ El audio se genera en el servidor con [Piper](https://github.com/OHF-Voice/piper
 
 ## Hardware
 
+> 🛠️ **[Guía de montaje paso a paso](docs/MONTAJE.md)**: lista de compra con precios, cableado, calibración, prueba de audio, medidas para la carcasa y solución de problemas.
+
+<p align="center"><img src="docs/img/conexiones.png" alt="Diagrama de conexiones" width="100%"></p>
+
 | Componente | Notas |
 |---|---|
 | ESP32 DevKit V1 (WROOM, 30 pines) | No necesita PSRAM: el audio se lee en streaming |
@@ -89,6 +93,8 @@ El audio se genera en el servidor con [Piper](https://github.com/OHF-Voice/piper
 | Radxa ROCK 3C, Raspberry Pi o cualquier Linux | Servidor siempre encendido |
 | Cargador USB 5 V / 2 A | 2 A por los picos del altavoz |
 | Cables Dupont y carcasa de bloques | |
+
+**Coste total aproximado: 25-45 €** (sin contar el servidor). Detalle en la [lista de compra](docs/MONTAJE.md#1-lista-de-compra).
 
 ### Cableado
 
@@ -245,7 +251,7 @@ La [CI](.github/workflows/ci.yml) ejecuta los tests, compila la web y **compila 
 │   └── dashboard_emt/   Sketch del ESP32 (pantalla, táctil, audio I2S)
 ├── frontend/            Web React + Tailwind (Vite)
 ├── deploy/              Servicio systemd endurecido
-└── docs/                Seguridad e imágenes
+└── docs/                Guía de montaje, seguridad e imágenes
 ```
 
 ## Hoja de ruta
@@ -253,7 +259,7 @@ La [CI](.github/workflows/ci.yml) ejecuta los tests, compila la web y **compila 
 - [ ] Cuenta atrás continua en la pantalla a partir de `llega_a`.
 - [ ] Registro histórico de estimaciones frente a llegadas reales para corregir el sesgo del SAE por línea, parada y hora.
 - [ ] Posición de los autobuses (geoportal del Ajuntament) para mostrar "a 3 paradas".
-- [ ] Foto del montaje final.
+- [ ] Foto del montaje final (siguiendo la [guía de montaje](docs/MONTAJE.md)).
 
 ## Créditos y aviso legal
 
