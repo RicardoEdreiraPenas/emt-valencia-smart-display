@@ -39,6 +39,7 @@
   const FW = {
     busDelay: 20000, timeDelay: 10000, touchCooldown: 500,
     wifiRetryDelay: 10000, avisoDelay: 4000, avisoBanner: 60000, httpTimeout: 6000,
+    nocheDesde: 2300, nocheHasta: 700, despierta: 30000,   // config.h: NOCHE_DESDE, NOCHE_HASTA, DESPIERTA_S
   };
   // Colores del firmware (tft.color565)
   const C = {
@@ -81,6 +82,7 @@
       this.lastWifiTry = now; this.lastAvisoCheck = now;
       this.ultimoAvisoId = ''; this.avisoTexto = ''; this.avisoHasta = 0;
       this.busy = false; this.avisoBusy = false; this.wifiPerdido = false;
+      this.pantallaOn = true; this.forzado = 0; this.nocheAnterior = false; this.despiertaHasta = 0;
       this.mensajeCentral('Conectando WiFi...', C.WHITE);
       log('Arranque: conectando WiFi');
     }
@@ -263,8 +265,53 @@
       this.net.backend.reproducir(ruta, doc);
     }
 
+    // ---- luz de la pantalla: modo noche y botón TTP223 (revisarLuz del firmware)
+    esNoche() {
+      const [h, m] = hhmm(Clock.now()).split(':').map(Number);
+      const t = h * 100 + m, a = FW.nocheDesde, b = FW.nocheHasta;
+      return a <= b ? t >= a && t < b : t >= a || t < b;
+    }
+    pantallaDeseada() {
+      if (this.avisoActivo()) return true;           // un aviso siempre se ve
+      if (this.forzado !== 0) return this.forzado > 0;
+      if (!this.esNoche()) return true;
+      return this.despiertaHasta !== 0 && Clock.now() < this.despiertaHasta;
+    }
+    encenderPantalla(on) {
+      if (on === this.pantallaOn) return;
+      this.pantallaOn = on;
+      log(on ? 'Pantalla encendida' : 'Pantalla apagada');
+      this.rect(0, 0, 320, 240, C.BG);
+      if (!on) return;
+      if (this.wifi) this.fetchBusData(); else this.drawSinWifi(true);
+      this.drawClock();
+      this.lastBusUpdate = Clock.now();
+    }
+    revisarLuz() {
+      if (this.state !== 'run') return;
+      const noche = this.esNoche();
+      if (noche !== this.nocheAnterior) { this.nocheAnterior = noche; this.forzado = 0; }
+      if (this.despiertaHasta !== 0 && Clock.now() >= this.despiertaHasta) this.despiertaHasta = 0;
+      this.encenderPantalla(this.pantallaDeseada());
+    }
+    boton() {   // toque en el TTP223
+      if (this.state !== 'run') return;
+      this.forzado = this.pantallaOn ? -1 : 1;
+      this.despiertaHasta = 0;
+      log(`Botón: ${this.forzado > 0 ? 'encender' : 'apagar'}`);
+      this.revisarLuz();
+    }
+
     touch(x) {
       if (this.state !== 'run' || Clock.now() - this.lastTouchTime <= FW.touchCooldown) return;
+      if (!this.pantallaOn) {   // con la pantalla apagada, el toque solo la enciende
+        this.lastTouchTime = Clock.now();
+        if (this.forzado < 0) this.forzado = 0;
+        this.despiertaHasta = Clock.now() + FW.despierta;
+        log('Toque con la pantalla apagada: se enciende 30 s');
+        this.revisarLuz();
+        return;
+      }
       const n = this.paradas.length; if (!n) return;
       const derecha = x > 160;
       this.paradaActual = derecha ? (this.paradaActual + 1) % n : (this.paradaActual - 1 + n) % n;
@@ -293,22 +340,23 @@
       }
       // WiFi caído: aviso en pantalla y reintento cada 10 s sin bloquear
       if (this.wifi && !wifiUp) { this.wifi = false; log('WiFi perdido', 'bad'); }
-      if (!this.wifi && !this.wifiPerdido) { this.wifiPerdido = true; this.drawSinWifi(); }
+      this.revisarLuz();
+      if (!this.wifi && !this.wifiPerdido) { this.wifiPerdido = true; if (this.pantallaOn) this.drawSinWifi(); }
       if (!this.wifi && now - this.lastWifiTry > FW.wifiRetryDelay) {
         this.lastWifiTry = now;
         if (wifiUp) { this.wifi = true; log('WiFi reconectado', 'good'); } else log('Reintentando WiFi...');
       }
-      if (this.wifi && this.wifiPerdido) { this.wifiPerdido = false; this.fetchBusData(); this.lastBusUpdate = now; }
+      if (this.wifi && this.wifiPerdido) { this.wifiPerdido = false; if (this.pantallaOn) this.fetchBusData(); this.lastBusUpdate = now; }
       if (now - this.lastBusUpdate > FW.busDelay) {
-        if (this.wifi) this.fetchBusData();
+        if (this.pantallaOn && this.wifi) this.fetchBusData();
         this.lastBusUpdate = now;
       }
-      if (now - this.lastTimeUpdate > FW.timeDelay) { this.drawClock(); this.lastTimeUpdate = now; }
+      if (now - this.lastTimeUpdate > FW.timeDelay) { if (this.pantallaOn) this.drawClock(); this.lastTimeUpdate = now; }
       if (this.wifi && now - this.lastAvisoCheck > FW.avisoDelay) { this.checkAviso(); this.lastAvisoCheck = now; }
       if (this.avisoHasta !== 0 && now >= this.avisoHasta) {
         this.avisoHasta = 0;
         this.borrarBanner();
-        if (this.wifi) this.fetchBusData();
+        if (this.pantallaOn && this.wifi) this.fetchBusData();
         this.lastBusUpdate = now;
       }
     }
@@ -667,6 +715,7 @@
   });
   $('tapL').addEventListener('click', () => device.touch(60));
   $('tapR').addEventListener('click', () => device.touch(260));
+  $('boton').addEventListener('click', () => device.boton());
 
   for (const el of document.querySelectorAll('input[name="mode"]')) el.addEventListener('change', () => setMode(el.value));
   for (const el of document.querySelectorAll('input[name="speed"]')) {
@@ -762,6 +811,10 @@
     $('stWifi').dataset.ok = device.wifi ? '1' : '0';
     $('stNext').textContent = device.state === 'run' ? `${Math.ceil(device.nextRefreshIn() / 1000)} s` : '—';
     $('stStop').textContent = device.paradas.length ? device.paradas[device.paradaActual] : '—';
+    const apagada = device.state === 'run' && !device.pantallaOn;
+    $('stLuz').textContent = device.state !== 'run' ? '—' : apagada ? (device.esNoche() ? 'apagada (noche)' : 'apagada (botón)')
+      : device.despiertaHasta ? `encendida ${Math.ceil((device.despiertaHasta - Clock.now()) / 1000)} s` : 'encendida';
+    $('apagada').hidden = !apagada;
     $('stAviso').textContent = device.avisoActivo() ? `banner ${Math.ceil((device.avisoHasta - Clock.now()) / 1000)} s` : 'ninguno';
   }
   setInterval(frame, 50);

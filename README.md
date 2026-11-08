@@ -68,7 +68,7 @@ Un simulador en el navegador para probar el sistema **sin montar el hardware**. 
 
 - **EMT en directo** (el modo de la [demo publicada](https://ricardoedreirapenas.github.io/emt-valencia-smart-display/)). Llegadas reales de cinco paradas de València, tiempo real de Open-Meteo y avisos de salida sobre datos reales. Como la EMT no deja que otras webs le pidan datos, pasan por un intermediario propio ([`proxy-demo/`](proxy-demo/), un Cloudflare Worker) que solo atiende esas cinco paradas y guarda cada respuesta 20 s: la EMT recibe como mucho 5 consultas cada 20 s, haya los visitantes que haya.
 - **Tu servidor.** Abre `http://<ip-del-servidor>:5000/simulador/` y usa tu propio servidor, tus paradas y tu configuración, como el ESP32.
-- **Demo simulada.** Servidor simulado (misma lógica que `app.py` y `avisos.py`) con el tiempo acelerable (×10, ×60) y escenarios a un clic: bus llegando, sin servicio, línea desviada, EMT caída, servidor apagado, WiFi caído, aviso de salida con voz y los siete iconos del tiempo, de día y de noche.
+- **Demo simulada.** Servidor simulado (misma lógica que `app.py` y `avisos.py`) con el tiempo acelerable (×10, ×60) y escenarios a un clic: modo noche y botón TTP223, bus llegando, sin servicio, línea desviada, EMT caída, servidor apagado, WiFi caído, aviso de salida con voz y los siete iconos del tiempo, de día y de noche.
 
 **Lo que encontró antes de montar nada**, ya corregido en el firmware y el servidor:
 
@@ -126,7 +126,8 @@ El audio se genera en el servidor con [Piper](https://github.com/OHF-Voice/piper
 | ESP32 DevKit V1 (WROOM, 30 pines) | No necesita PSRAM: el audio se lee en streaming |
 | Pantalla TFT SPI ILI9341 2,4" o 2,8" con táctil XPT2046 | |
 | Amplificador I2S MAX98357A + altavoz 3 W / 4 Ω | Opcional, para los avisos de voz |
-| Radxa ROCK 3C, Raspberry Pi o cualquier Linux | Servidor siempre encendido |
+| Botón táctil TTP223 | Opcional: apaga y enciende la pantalla |
+| Radxa ROCK 3C, Raspberry Pi o cualquier Linux | Solo con la opción A (servidor en casa) |
 | Cargador USB 5 V / 2 A | 2 A por los picos del altavoz |
 | Cables Dupont y carcasa de bloques | |
 
@@ -141,7 +142,8 @@ El audio se genera en el servidor con [Piper](https://github.com/OHF-Voice/piper
 
 | TFT | ESP32 |
 |---|---|
-| VCC, LED | 3V3 |
+| VCC | 3V3 |
+| LED (luz) | GPIO 17 (TX2) |
 | GND | GND |
 | CS | GPIO 15 |
 | RESET | GPIO 4 |
@@ -164,8 +166,18 @@ El audio se genera en el servidor con [Piper](https://github.com/OHF-Voice/piper
 | DIN | GPIO 22 |
 | SD, GAIN | sin conectar |
 
+**Botón (TTP223)**
+
+| Módulo | ESP32 |
+|---|---|
+| VCC | 3V3 |
+| GND | GND |
+| I/O | GPIO 33 |
+
 </td></tr>
 </table>
+
+**Modo noche:** de 23:00 a 07:00 la pantalla se apaga sola y deja de pedir datos. Tocarla la enciende 30 s, el botón la apaga o enciende cuando quieras y un aviso de salida siempre la enciende. Se configura en `config.h`.
 
 ---
 

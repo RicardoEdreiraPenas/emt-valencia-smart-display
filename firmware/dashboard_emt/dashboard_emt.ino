@@ -280,6 +280,10 @@ void setup() {
   // de sobra para una ventana de aviso de 90 s
   if (serverRoot.startsWith("https://")) avisoDelay = 10000;
 
+  if (PIN_LUZ >= 0) { pinMode(PIN_LUZ, OUTPUT); digitalWrite(PIN_LUZ, HIGH); }
+  // Pull-down: si el botón no está conectado, el pin no da toques fantasma
+  if (PIN_BOTON >= 0) pinMode(PIN_BOTON, INPUT_PULLDOWN);
+
   tft.begin();
   tft.setRotation(1);
   ts.begin();
@@ -306,12 +310,12 @@ void loop() {
   if (!wifiOk && !wifiPerdido) {
     wifiPerdido = true;
     Serial.println("WiFi perdido");
-    drawSinWifi();
+    if (pantallaOn) drawSinWifi();
   }
   if (wifiOk && wifiPerdido) {
     wifiPerdido = false;
     Serial.println("WiFi recuperado");
-    fetchBusData();
+    if (pantallaOn) fetchBusData();
     lastBusUpdate = millis();
   }
 
@@ -322,9 +326,20 @@ void loop() {
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   }
 
+  revisarLuz();
+
   if (ts.touched() && (millis() - lastTouchTime > touchCooldown)) {
     TS_Point p = ts.getPoint();
     Serial.printf("Toque: x=%d y=%d z=%d\n", p.x, p.y, p.z);
+    lastTouchTime = millis();
+
+    // Con la pantalla apagada, el toque solo la enciende (no cambia de parada)
+    if (!pantallaOn) {
+      if (forzado < 0) forzado = 0;
+      despiertaHasta = millis() + DESPIERTA_S * 1000UL;
+      revisarLuz();
+      return;
+    }
 
     bool derecha = (p.x > TOUCH_X_MITAD) != TOUCH_INVERTIDO;
     if (derecha) {
@@ -340,12 +355,12 @@ void loop() {
   }
 
   if (millis() - lastBusUpdate > busDelay) {
-    if (WiFi.status() == WL_CONNECTED) fetchBusData();
+    if (pantallaOn && WiFi.status() == WL_CONNECTED) fetchBusData();
     lastBusUpdate = millis();
   }
 
   if (millis() - lastTimeUpdate > timeDelay) {
-    drawClock();
+    if (pantallaOn) drawClock();
     lastTimeUpdate = millis();
   }
 
@@ -358,9 +373,88 @@ void loop() {
   if (avisoHasta != 0 && millis() >= avisoHasta) {
     avisoHasta = 0;
     borrarBanner();
-    if (WiFi.status() == WL_CONNECTED) fetchBusData();
+    if (pantallaOn && WiFi.status() == WL_CONNECTED) fetchBusData();
     lastBusUpdate = millis();
   }
+}
+
+// ===========================================================================
+// LUZ DE LA PANTALLA: modo noche y botón TTP223
+// ===========================================================================
+#ifndef PIN_LUZ
+#define PIN_LUZ -1
+#endif
+#ifndef PIN_BOTON
+#define PIN_BOTON -1
+#endif
+#ifndef NOCHE_DESDE
+#define NOCHE_DESDE 2300
+#define NOCHE_HASTA 700
+#endif
+#ifndef DESPIERTA_S
+#define DESPIERTA_S 30
+#endif
+
+bool pantallaOn = true;
+int forzado = 0;                  // botón: 1 = encendida, -1 = apagada, 0 = automático
+bool nocheAnterior = false;
+unsigned long despiertaHasta = 0; // encendida un rato tras tocarla de noche
+bool botonAntes = false;
+unsigned long ultimoBoton = 0;
+unsigned long ultimaLuz = 0;
+
+bool esNoche() {
+  struct tm t;
+  if (!getLocalTime(&t, 10)) return false;   // sin hora todavía: encendida
+  int hhmm = t.tm_hour * 100 + t.tm_min;
+  return NOCHE_DESDE <= NOCHE_HASTA ? (hhmm >= NOCHE_DESDE && hhmm < NOCHE_HASTA)
+                                    : (hhmm >= NOCHE_DESDE || hhmm < NOCHE_HASTA);
+}
+
+bool pantallaDeseada() {
+  if (avisoActivo()) return true;            // un aviso de salida siempre se ve
+  if (forzado != 0) return forzado > 0;
+  if (!esNoche()) return true;
+  return despiertaHasta != 0 && (long)(despiertaHasta - millis()) > 0;
+}
+
+void encenderPantalla(bool on) {
+  if (on == pantallaOn) return;
+  pantallaOn = on;
+  Serial.println(on ? "Pantalla encendida" : "Pantalla apagada");
+  tft.fillScreen(COLOR_BG);        // sin pin de luz, al menos se queda en negro
+  if (PIN_LUZ >= 0) digitalWrite(PIN_LUZ, on ? HIGH : LOW);
+  if (!on) return;
+  if (WiFi.status() == WL_CONNECTED) fetchBusData();   // datos frescos al encender
+  else drawSinWifi(true);
+  drawClock();
+  lastBusUpdate = millis();
+}
+
+void revisarLuz() {
+  if (millis() - ultimaLuz < 100) return;
+  ultimaLuz = millis();
+
+  // Botón TTP223: da HIGH mientras se toca. Cada toque cambia encendida/apagada.
+  if (PIN_BOTON >= 0) {
+    bool tocado = digitalRead(PIN_BOTON) == HIGH;
+    if (tocado && !botonAntes && millis() - ultimoBoton > 400) {
+      ultimoBoton = millis();
+      forzado = pantallaOn ? -1 : 1;
+      despiertaHasta = 0;
+      Serial.println(forzado > 0 ? "Boton: encender" : "Boton: apagar");
+    }
+    botonAntes = tocado;
+  }
+
+  // Al pasar de día a noche (o al revés), el botón vuelve a automático
+  bool noche = esNoche();
+  if (noche != nocheAnterior) {
+    nocheAnterior = noche;
+    forzado = 0;
+  }
+  if (despiertaHasta != 0 && (long)(despiertaHasta - millis()) <= 0) despiertaHasta = 0;
+  encenderPantalla(pantallaDeseada());
 }
 
 // La fuente GFX solo tiene ASCII: quitamos tildes y ñ (UTF-8 de 2 bytes)

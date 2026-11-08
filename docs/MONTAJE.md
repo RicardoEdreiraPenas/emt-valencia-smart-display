@@ -2,7 +2,7 @@
 
 Del paquete de componentes a la pantalla funcionando en la carcasa. Tiempo estimado: **2-3 horas** la primera vez.
 
-<p align="center"><img src="img/conexiones.png" alt="Diagrama de conexiones: ESP32, pantalla TFT y amplificador MAX98357A" width="100%"></p>
+<p align="center"><img src="img/conexiones.png" alt="Diagrama de conexiones: ESP32, pantalla TFT, amplificador MAX98357A y botón TTP223" width="100%"></p>
 
 ---
 
@@ -16,6 +16,7 @@ Precios orientativos en España (octubre de 2026). En AliExpress suelen salir a 
 | ☐ | **Pantalla TFT 2,8" táctil** | 1 | "TFT 2.8 SPI ILI9341 **XPT2046** touch", la placa roja de 14 pines (≈ 86 × 50 mm). Que diga **ILI9341** y **XPT2046** | 10-12 € |
 | ☐ | **Amplificador I2S MAX98357A** | 1 | "MAX98357A I2S amplificador 3W". Suele venir con los pines **sin soldar** | 4-7 € |
 | ☐ | **Altavoz** | 1 | "Altavoz 3W 4 ohm 40 mm" (o 28-50 mm según el hueco de la carcasa) | 2-4 € |
+| ☐ | Botón táctil **TTP223** (opcional) | 1 | "TTP223 módulo táctil capacitivo". Para apagar y encender la pantalla | 1-2 € |
 | ☐ | **Cables Dupont hembra-hembra** | 1 pack | 20 cm, pack de 40 (sobran) | 3-5 € |
 | ☐ | **Cargador USB 5 V · 2 A + cable USB-C de datos** | 1 | El cable tiene que ser **de datos**, no solo de carga (para programar) | 0-10 € |
 | ☐ | Servidor (Radxa ROCK 3C / Raspberry Pi) | 1 | Cualquier Linux siempre encendido en tu red. **No hace falta con la opción B** (Cloudflare, gratis) | ya lo tienes / 0 € |
@@ -55,13 +56,15 @@ Son 13 cables. La pantalla y el táctil **comparten** reloj y datos (SCK, MOSI, 
 | 5 | DC | → | D2 | morado |
 | 6 | SDI (MOSI) | → | D23 | azul |
 | 7 | SCK | → | D18 | amarillo |
-| 8 | LED | → | 3V3 | rojo |
+| 8 | LED | → | TX2 (GPIO 17) | amarillo oscuro |
 | 9 | SDO (MISO) | → | D19 | verde |
 | 10 | T_CLK | → | D18 *(compartido con 7)* | amarillo |
 | 11 | T_CS | → | D21 | rosa |
 | 12 | T_DIN | → | D23 *(compartido con 6)* | azul |
 | 13 | T_DO | → | D19 *(compartido con 9)* | verde |
 | — | T_IRQ | | sin conectar | |
+
+> El pin **LED** es la luz de la pantalla. Va a TX2 para que el ESP32 la pueda apagar de noche. Si prefieres que esté siempre encendida, conéctalo a 3V3 y pon `#define PIN_LUZ -1` en `config.h`.
 
 **Comprobación:** conecta el USB. La pantalla debe encenderse y mostrar *"Conectando WiFi..."*. Si se queda en blanco, revisa VCC, GND, CS, DC y RESET.
 
@@ -117,7 +120,28 @@ Volumen: en el firmware, `volumen = 0.6` (de 0.0 a 1.0). Para más potencia cone
 
 ---
 
-## 7. Montar en la carcasa
+## 7. Botón TTP223 y modo noche (opcional)
+
+La pantalla se apaga sola de **23:00 a 07:00** (`NOCHE_DESDE` y `NOCHE_HASTA` en `config.h`). De noche, tocar la pantalla la enciende **30 s** sin cambiar de parada. Un aviso de salida siempre la enciende. Esto funciona sin el botón.
+
+El botón TTP223 es un sensor táctil: se activa con el dedo, incluso a través de una pieza fina de plástico, así que se puede esconder dentro de la carcasa. Cada toque **apaga o enciende la pantalla** cuando quieras. Lo que elijas con el botón dura hasta el siguiente cambio de día a noche (o al revés); después vuelve al modo automático.
+
+| # | TTP223 | → | ESP32 |
+|:-:|---|:-:|---|
+| 1 | VCC | → | 3V3 *(compartido con la pantalla)* |
+| 2 | I/O (o SIG) | → | D33 |
+| 3 | GND | → | GND |
+
+- Con el USB desconectado. Para compartir 3V3 y GND, usa un cable en "Y" o la mini protoboard.
+- **Nunca a VIN (5 V):** la señal I/O iría a 5 V y el ESP32 solo admite 3,3 V.
+- No hay que soldar ni configurar nada en el módulo: de fábrica da un pulso mientras lo tocas, que es lo que espera el firmware.
+- Si no lo montas, déjalo así: el pin tiene una resistencia interna que evita toques fantasma. O pon `#define PIN_BOTON -1`.
+
+**Prueba:** toca el botón. En el Monitor Serie verás `Boton: apagar` y la pantalla se apagará; vuelve a tocarlo para encenderla.
+
+---
+
+## 8. Montar en la carcasa
 
 Medidas para diseñar la carcasa:
 
@@ -126,6 +150,7 @@ Medidas para diseñar la carcasa:
 | Pantalla | 86 × 50 × 9 mm (área visible ≈ 58 × 43 mm) | El marco debe tapar solo el borde rojo, no la zona táctil |
 | ESP32 DevKit | 52 × 28 mm (+ pines) | Detrás de la pantalla, con el **USB accesible** desde fuera |
 | MAX98357A | 18 × 18 mm | Junto al altavoz |
+| TTP223 | 15 × 11 mm | Pegado por dentro de una pared fina de la carcasa (≤ 2 mm), donde quieras "el botón" |
 | Altavoz 40 mm | Ø 40 × 20 mm | Mirando hacia fuera, con una rejilla o huecos entre ladrillos |
 
 - Sujeta las placas con cinta de doble cara o masilla, sin apretar los cables.
@@ -134,7 +159,7 @@ Medidas para diseñar la carcasa:
 
 ---
 
-## 8. Si algo falla
+## 9. Si algo falla
 
 | Síntoma | Causa probable | Solución |
 |---|---|---|
@@ -146,5 +171,7 @@ Medidas para diseñar la carcasa:
 | "Clave incorrecta (API_KEY)" | Opción B: `API_KEY` de `secrets.h` distinta de la del Worker | Copia la clave de nuevo o genera otra con `wrangler secret put API_TOKEN` |
 | "Sin conexion al servidor" con `https://` | Certificado o dirección del Worker | Revisa `SERVER_ROOT`; para diagnosticar, prueba un momento con `TLS_SIN_VERIFICAR` |
 | "EMT no disponible" | La EMT no responde | Se recupera solo; mientras tanto muestra el último dato (punto naranja) |
+| La pantalla se queda negra pero el ESP32 funciona | Modo noche o apagada con el botón | Tócala (se enciende 30 s) o toca el botón; revisa el cable LED → TX2 |
+| La pantalla se apaga y enciende sola | Botón mal conectado o a 5 V | Revisa I/O → D33 y VCC → 3V3; si no hay botón, `PIN_BOTON -1` |
 | El ESP32 se reinicia al sonar | Cargador flojo | Usa uno de **2 A** |
 | Zumbido o ruido | Cables de audio largos | Acorta los cables BCLK, LRC y DIN, o baja el volumen |

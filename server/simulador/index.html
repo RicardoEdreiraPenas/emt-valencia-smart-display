@@ -28,6 +28,7 @@
           <canvas id="tft" width="960" height="720" role="img" aria-label="Pantalla TFT de 320 por 240 píxeles. Pulsa a la izquierda o a la derecha para cambiar de parada."></canvas>
           <span class="half l" aria-hidden="true">◀</span><span class="half r" aria-hidden="true">▶</span>
           <span id="ripple" aria-hidden="true"></span>
+          <span id="apagada" hidden>Pantalla apagada · tócala para encenderla</span>
         </div>
       </div>
       <span class="label" aria-hidden="true">ILI9341 · 320×240</span>
@@ -38,11 +39,13 @@
       <button class="btn" id="tapL" type="button">◀ Toque izquierda</button>
       <button class="btn" id="tapR" type="button">Toque derecha ▶</button>
     </div>
+    <button class="btn" id="boton" type="button">● Botón TTP223 <small>(apaga o enciende la pantalla)</small></button>
 
     <dl class="status">
       <div><dt>WiFi</dt><dd id="stWifi">conectando</dd></div>
       <div><dt>Parada</dt><dd id="stStop">—</dd></div>
       <div><dt>Próximo refresco</dt><dd id="stNext">—</dd></div>
+      <div><dt>Pantalla</dt><dd id="stLuz">—</dd></div>
       <div><dt>Aviso</dt><dd id="stAviso">ninguno</dd></div>
       <div><dt>Datos</dt><dd id="stSource">Demo simulada</dd></div>
     </dl>
@@ -115,6 +118,11 @@
         <label class="check" for="ruleOn"><input type="checkbox" id="ruleOn" checked>Avisos activos</label>
       </div>
       <p class="hint">Igual que <code>server/avisos.py</code>: suena cuando llegada − minutos andando cae entre −30 s y +60 s, una sola vez por autobús. Aquí no se aplican la franja horaria ni el silencio nocturno.</p>
+    </section>
+
+    <section>
+      <h2>Modo noche</h2>
+      <p class="hint">De 23:00 a 07:00 la pantalla se apaga sola. Tocarla la enciende 30 s (sin cambiar de parada). El botón TTP223 la apaga o enciende cuando quieras, hasta el siguiente cambio de día a noche. Un aviso de salida siempre la enciende. En la demo, usa +5 min o ×60 para llegar a las 23:00.</p>
     </section>
 
     <section>
