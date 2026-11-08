@@ -14,6 +14,12 @@ const ICONOS_CLIMA = {
   tormenta: ['⛈️', '⛈️', 'Tormenta'],
 };
 
+// WAV de silencio (44 bytes de cabecera + 2 muestras): sirve para "desbloquear"
+// el audio en iPhone/iPad, que solo deja sonar tras un toque del usuario.
+const SILENCIO_WAV = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQQAAAAAAAAA';
+const AVISO_CADA_MS = 5000;
+const AVISO_BANNER_MS = 60000;
+
 export default function DashboardEMT() {
   const [paradas, setParadas] = useState([]);
   const [paradaIdx, setParadaIdx] = useState(0);
@@ -22,6 +28,57 @@ export default function DashboardEMT() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
   const paradaRef = useRef(paradaIdx);
+  const [sonido, setSonido] = useState(false);
+  const [aviso, setAviso] = useState(null);       // { id, texto, hasta }
+  const audioRef = useRef(null);
+  const sonidoRef = useRef(false);
+  const ultimoAvisoRef = useRef('');
+
+  // Avisos de salida: igual que el ESP32, se pregunta al servidor cada pocos
+  // segundos; un aviso nuevo muestra la barra verde y, con el sonido activado,
+  // reproduce el audio que genera el servidor (voz o tono).
+  useEffect(() => {
+    let activo = true;
+    const revisar = async () => {
+      try {
+        const r = await fetch(`${API_BASE}/api/aviso`);
+        if (!activo || r.status !== 200) return;
+        const a = await r.json();
+        if (!a?.id || a.id === ultimoAvisoRef.current) return;
+        ultimoAvisoRef.current = a.id;
+        setAviso({ id: a.id, texto: a.texto, hasta: Date.now() + AVISO_BANNER_MS });
+        const ruta = String(a.audio || '');
+        if (sonidoRef.current && audioRef.current && /^\/api\/audio\/[0-9a-f]{10}\.wav$/.test(ruta)) {
+          audioRef.current.src = `${API_BASE}${ruta}`;
+          audioRef.current.play().catch(() => {});
+        }
+      } catch {
+        // sin conexión: se vuelve a intentar en el siguiente ciclo
+      }
+    };
+    revisar();
+    const t = setInterval(revisar, AVISO_CADA_MS);
+    return () => { activo = false; clearInterval(t); };
+  }, []);
+
+  // La barra del aviso se quita sola al minuto
+  useEffect(() => {
+    if (!aviso) return undefined;
+    const t = setTimeout(() => setAviso(null), Math.max(0, aviso.hasta - Date.now()));
+    return () => clearTimeout(t);
+  }, [aviso]);
+
+  const alternarSonido = (e) => {
+    e.stopPropagation();                         // no cambiar de parada
+    if (!audioRef.current) audioRef.current = new Audio();
+    const nuevo = !sonidoRef.current;
+    sonidoRef.current = nuevo;
+    setSonido(nuevo);
+    if (nuevo) {                                 // desbloqueo dentro del toque
+      audioRef.current.src = SILENCIO_WAV;
+      audioRef.current.play().catch(() => {});
+    }
+  };
 
   // Reloj
   useEffect(() => {
@@ -89,14 +146,14 @@ export default function DashboardEMT() {
       className="bg-black text-white h-screen w-screen flex flex-col font-sans select-none overflow-hidden cursor-pointer"
       onClick={handleTouch}
     >
-      <div className="flex justify-between items-center p-5 text-xl font-bold tracking-wide">
+      <div className="flex justify-between items-center gap-3 p-5 text-xl font-bold tracking-wide whitespace-nowrap">
         <span className="flex items-center gap-2">
           EMT {paradas[paradaIdx]}
           {datos.obsoleto && (
             <span className="w-2 h-2 rounded-full bg-[#ff9f0a]" title="Último dato disponible" />
           )}
         </span>
-        <div className="flex space-x-4">
+        <div className="flex space-x-3">
           {ICONOS_CLIMA[datos.icono_clima] && (
             <span role="img" aria-label={ICONOS_CLIMA[datos.icono_clima][2]} title={ICONOS_CLIMA[datos.icono_clima][2]}>
               {ICONOS_CLIMA[datos.icono_clima][datos.noche ? 1 : 0]}
@@ -106,6 +163,18 @@ export default function DashboardEMT() {
           <span className="text-[#5ac8fa]" title="Probabilidad de lluvia hoy">☔ {datos.prob_lluvia}</span>
         </div>
         <span>{hora}</span>
+      </div>
+
+      <div className="px-5 -mt-2 mb-2 flex justify-end">
+        <button
+          type="button"
+          onClick={alternarSonido}
+          aria-pressed={sonido}
+          className={`rounded-full px-4 py-1.5 text-base font-semibold whitespace-nowrap ${sonido ? 'bg-[#30d158] text-black' : 'bg-[#1c1c1e] text-[#8e8e93]'}`}
+          title={sonido ? 'Avisos con sonido activados' : 'Toca para oír los avisos de salida'}
+        >
+          {sonido ? '🔔 Avisos con sonido' : '🔕 Activar sonido de avisos'}
+        </button>
       </div>
 
       <div className="flex-1 px-5 pt-2">
@@ -141,6 +210,12 @@ export default function DashboardEMT() {
           ))
         )}
       </div>
+
+      {aviso && (
+        <div className="mx-5 mb-4 rounded-2xl bg-[#30d158] text-black p-4 text-xl font-bold text-center" role="alert">
+          SAL YA · {String(aviso.texto || '').replace(/^Sal ya\.\s*/i, '')}
+        </div>
+      )}
 
       <div className="flex justify-center pb-6 space-x-3">
         {paradas.map((_, idx) => (

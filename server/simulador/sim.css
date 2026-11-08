@@ -68,7 +68,7 @@ h1 { font: 700 clamp(30px, 5vw, 44px)/1 var(--font-display); letter-spacing: .01
 @keyframes ripple { from { transform: scale(.3); opacity: 1; } to { transform: scale(1.4); opacity: 0; } }
 #apagada { position: absolute; inset: 0; display: grid; place-items: center; padding: 16px; text-align: center; font: 600 13px/1.4 var(--font-mono); color: rgb(255 255 255 / .38); pointer-events: none; }
 #apagada[hidden] { display: none; }
-#boton { justify-self: start; }
+#boton, #soundQuick { justify-self: start; }
 #boton small { font-weight: 400; opacity: .75; }
 .half { position: absolute; top: 6px; font: 600 11px/1 var(--font-mono); color: rgb(255 255 255 / .28); pointer-events: none; }
 .half.l { left: 8px; } .half.r { right: 8px; }

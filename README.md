@@ -37,7 +37,7 @@ Se elige en [Puesta en marcha](#1-servidor-elige-a-o-b). Las dos opciones pasan 
 - **La misma fuente que la app oficial.** Consulta directamente el SAE de la EMT (el sistema de seguimiento por GPS de los autobuses), sin librerías intermedias.
 - **El tiempo de un vistazo.** Icono del cielo (sol, nubes, lluvia, tormenta, niebla, nieve; luna de noche), temperatura y probabilidad de lluvia de [Open-Meteo](https://open-meteo.com/).
 - **Distingue lo real de lo previsto.** Las estimaciones en tiempo real se muestran en blanco; las horas teóricas, en gris; "Pròxim" se convierte en *Llegando* y las líneas desviadas se marcan en naranja.
-- **Aviso de salida por voz.** Calcula `llegada del bus − minutos andando` y avisa en el último minuto, con voz neuronal (Piper offline en la placa, o Workers AI en Cloudflare).
+- **Aviso de salida por voz.** Calcula `llegada del bus − minutos andando` y avisa en el último minuto, con voz neuronal (Piper offline en la placa, o Workers AI en Cloudflare). Suena en el aparato y también en la web del móvil o la tablet (botón "Activar sonido de avisos").
 - **Robusto.** Caché compartida de 15 s; si la EMT no responde, muestra el último dato bueno y lo marca.
 - **Seguro por diseño.** Lista de paradas permitidas, sin CORS, servicio aislado con systemd (A) o clave de acceso y HTTPS con certificados verificados (B). Más de 90 tests automáticos. Ver [docs/SEGURIDAD.md](docs/SEGURIDAD.md).
 

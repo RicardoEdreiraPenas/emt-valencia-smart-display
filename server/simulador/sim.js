@@ -395,9 +395,17 @@
         speechSynthesis.cancel(); speechSynthesis.speak(u);
       } else { this.beep(); setTimeout(fin, 600); }
     },
+    // iPhone/iPad solo dejan sonar un <audio> que ya sonó tras un toque: al
+    // activar el sonido se reproduce un silencio en el mismo elemento.
+    el: null,
+    desbloquear() {
+      if (!this.el) this.el = new Audio();
+      this.el.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQQAAAAAAAAA';
+      this.el.play().catch(() => {});
+    },
     playUrl(url) {
       if (!this.on) { log('Sonido desactivado: actívalo en el panel para oír el aviso'); return; }
-      const a = new Audio(url); a.volume = this.volume;
+      const a = this.el || new Audio(); a.src = url; a.volume = this.volume;
       this.pulse(true); a.onended = a.onerror = () => this.pulse(false);
       a.play().catch(() => this.pulse(false));
     },
@@ -793,8 +801,12 @@
   $('soundBtn').addEventListener('click', () => {
     Sound.on = !Sound.on; toggleBtn($('soundBtn'), Sound.on);
     $('soundBtn').textContent = Sound.on ? 'Sonido activado' : 'Activar sonido';
-    if (Sound.on) Sound.say('Sonido activado');
+    toggleBtn($('soundQuick'), Sound.on);
+    $('soundQuick').textContent = Sound.on ? '🔊 Sonido de avisos activado' : '🔈 Activar sonido de avisos';
+    if (Sound.on) { Sound.desbloquear(); Sound.say('Sonido activado'); }
   });
+  // Atajo junto al aparato: en el móvil el panel de Sonido queda muy abajo
+  $('soundQuick').addEventListener('click', () => $('soundBtn').click());
   $('vol').addEventListener('input', (e) => { Sound.volume = Number(e.target.value); $('volOut').textContent = Sound.volume.toFixed(1); });
   $('testVoice').addEventListener('click', () => {
     if (!Sound.on) { Sound.on = true; toggleBtn($('soundBtn'), true); $('soundBtn').textContent = 'Sonido activado'; }
