@@ -1,0 +1,65 @@
+# Medición de la precisión de las estimaciones de la EMT.
+# Cada día laborable consulta la EMT cada 30 s de 07:00 a 09:30 (hora de Madrid)
+# y guarda las respuestas en la rama `medicion`. Análisis: medicion/analizar.py.
+name: Medición de precisión
+
+on:
+  schedule:
+    # 05:07 UTC = 06:07 en invierno y 07:07 en verano; el script espera a las 07:00
+    - cron: "7 5 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      desde:
+        description: "Hora de inicio (Madrid, HH:MM)"
+        default: "07:00"
+      hasta:
+        description: "Hora de fin (Madrid, HH:MM)"
+        default: "09:30"
+
+permissions:
+  contents: write
+
+# Dos lanzamientos el mismo día no miden a la vez: el segundo espera y,
+# si ya ha pasado la franja, termina sin hacer nada.
+concurrency:
+  group: medicion
+  cancel-in-progress: false
+
+jobs:
+  registrar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: pip install requests==2.34.2 tzdata
+
+      - name: Registrar
+        run: |
+          python medicion/registrar.py \
+            --desde "${{ inputs.desde || '07:00' }}" \
+            --hasta "${{ inputs.hasta || '09:30' }}" \
+            --salida "$RUNNER_TEMP/datos"
+
+      - name: Guardar en la rama medicion
+        run: |
+          shopt -s nullglob
+          ficheros=("$RUNNER_TEMP"/datos/*.jsonl.gz)
+          if [ ${#ficheros[@]} -eq 0 ]; then echo "Sin datos nuevos."; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git fetch --depth 1 origin medicion; then
+            git switch -c medicion FETCH_HEAD
+          else
+            git switch --orphan medicion
+            git rm -rfq . 2>/dev/null || true
+            printf '# Datos de la medición de precisión\n\nRespuestas crudas del SAE de la EMT, una por línea. Ver medicion/ en la rama main.\n' > README.md
+            git add README.md
+          fi
+          mkdir -p datos
+          cp "${ficheros[@]}" datos/
+          git add datos
+          git commit -qm "Medición $(TZ=Europe/Madrid date +%Y-%m-%d)"
+          for i in 1 2 3; do git push origin medicion && break; git pull --rebase origin medicion; done
