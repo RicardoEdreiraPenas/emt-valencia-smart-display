@@ -21,7 +21,10 @@ from zoneinfo import ZoneInfo
 
 import requests
 
-SAE_URL = "https://www.emtvalencia.es/EMT/mapfunctions/MapUtilsPetitions.php"
+# La EMT no responde a las IP de GitHub Actions, así que se consulta a través del
+# intermediario de la demo pública (proxy-demo/), que devuelve el XML tal cual.
+# Tiene una caché de 20 s: cada respuesta puede tener hasta 20 s de antigüedad.
+PROXY = "https://emt-demo-proxy.1ricardox.workers.dev"
 ZONA = ZoneInfo("Europe/Madrid")
 # Paradas de la demo pública (centro de València), las mismas que proxy-demo
 PARADAS = [708, 1676, 2080, 1619, 697]
@@ -37,9 +40,9 @@ def hoy_a_las(hhmm):
 def consultar(sesion, parada):
     t = time.time()
     try:
-        r = sesion.get(SAE_URL, params={"sec": "getSAE", "parada": parada, "adaptados": "false"},
-                       timeout=10)
-        return {"t": round(t, 1), "parada": parada, "estado": r.status_code, "xml": r.text}
+        r = sesion.get(f"{PROXY}/sae/{parada}", timeout=10)
+        return {"t": round(t, 1), "parada": parada, "estado": r.status_code, "xml": r.text,
+                "cache": r.headers.get("X-Demo-Cache")}
     except requests.RequestException as e:
         return {"t": round(t, 1), "parada": parada, "estado": None, "error": str(e)}
 
