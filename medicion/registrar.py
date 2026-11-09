@@ -37,14 +37,16 @@ def hoy_a_las(hhmm):
     return datetime.now(ZONA).replace(hour=h, minute=m, second=0, microsecond=0).timestamp()
 
 
-def consultar(sesion, parada):
-    t = time.time()
-    try:
-        r = sesion.get(f"{PROXY}/sae/{parada}", timeout=10)
-        return {"t": round(t, 1), "parada": parada, "estado": r.status_code, "xml": r.text,
-                "cache": r.headers.get("X-Demo-Cache")}
-    except requests.RequestException as e:
-        return {"t": round(t, 1), "parada": parada, "estado": None, "error": str(e)}
+def consultar(sesion, parada, intentos=2):
+    """Una consulta, con un reintento si la EMT tarda. t es el momento de la respuesta."""
+    for intento in range(intentos):
+        try:
+            r = sesion.get(f"{PROXY}/sae/{parada}", timeout=15)
+            return {"t": round(time.time(), 1), "parada": parada, "estado": r.status_code,
+                    "xml": r.text, "cache": r.headers.get("X-Demo-Cache")}
+        except requests.RequestException as e:
+            error = str(e)
+    return {"t": round(time.time(), 1), "parada": parada, "estado": None, "error": error}
 
 
 def main():
