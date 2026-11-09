@@ -20,7 +20,7 @@ Uso:
 import gzip
 import json
 import sys
-from collections import defaultdict
+from collections import Counter, defaultdict
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
@@ -30,7 +30,7 @@ from app import parsear_sae  # noqa: E402
 RESULTADOS = RAIZ / "medicion" / "resultados"
 IMG = RAIZ / "docs" / "img"
 
-MAX_HUECO_S = 75          # si entre dos consultas pasa más, no se puede fechar el paso
+MAX_HUECO_S = 120         # si entre dos consultas pasa más, no se puede fechar el paso
 ULTIMO_MAX_MIN = 2        # minutos máximos en la última aparición para contar como llegada
 HORIZONTES = [(0, 2), (2, 5), (5, 10), (10, 15), (15, 20), (20, 30)]
 
@@ -65,34 +65,58 @@ def tolerancia(t, eta):
 def emparejar(pistas, buses, t):
     """Empareja en orden las pistas activas con los autobuses de esta consulta.
 
-    Los autobuses de una misma línea y destino no se adelantan entre sí, así que se
-    prueba a dar por llegados los k primeros (k = 0, 1, …) y se elige el primer k en
-    que el resto encaja en orden dentro de la tolerancia.
+    Los autobuses de una misma línea y destino no se adelantan entre sí, así que es un
+    alineamiento en orden: cada pista se empareja con un autobús o queda sin pareja
+    (pasó por la parada o la EMT dejó de mostrarlo), y cada autobús sin pareja es nuevo
+    (la EMT puede empezar a mostrar uno por delante o por detrás). Se maximiza el número
+    de parejas dentro de la tolerancia y, a igualdad, se minimiza la diferencia total.
+
+    Devuelve (pistas_sin_pareja, parejas, autobuses_nuevos).
     """
-    for k in range(len(pistas) + 1):
-        resto = pistas[k:]
-        if len(resto) > len(buses):
-            continue
-        if all(abs(b["llega_a"] - p["eta"]) <= tolerancia(t, p["eta"])
-               for p, b in zip(resto, buses)):
-            return pistas[:k], list(zip(resto, buses)), buses[len(resto):]
-    return pistas, [], buses   # nada encaja: se cierran todas y se empieza de nuevo
+    n, m = len(pistas), len(buses)
+    # mejor[i][j] = (parejas, -diferencia) alineando pistas[i:] con buses[j:]
+    mejor = [[(0, 0.0)] * (m + 1) for _ in range(n + 1)]
+    for i in range(n - 1, -1, -1):
+        for j in range(m - 1, -1, -1):
+            opciones = [mejor[i + 1][j], mejor[i][j + 1]]
+            dif = abs(buses[j]["llega_a"] - pistas[i]["eta"])
+            if dif <= tolerancia(t, pistas[i]["eta"]):
+                sig = mejor[i + 1][j + 1]
+                opciones.append((sig[0] + 1, sig[1] - dif))
+            mejor[i][j] = max(opciones)
+    sueltas, pares, usados = [], [], set()
+    i = j = 0
+    while i < n and j < m:
+        dif = abs(buses[j]["llega_a"] - pistas[i]["eta"])
+        sig = mejor[i + 1][j + 1]
+        if dif <= tolerancia(t, pistas[i]["eta"]) and mejor[i][j] == (sig[0] + 1, sig[1] - dif):
+            pares.append((pistas[i], buses[j]))
+            usados.add(j)
+            i, j = i + 1, j + 1
+        elif mejor[i][j] == mejor[i + 1][j]:
+            sueltas.append(pistas[i])
+            i += 1
+        else:
+            j += 1
+    sueltas += pistas[i:]
+    return sueltas, pares, [b for k, b in enumerate(buses) if k not in usados]
 
 
 def reconstruir(serie):
     """De una serie [(t, llegadas)] de una parada saca los pasos reales con sus estimaciones."""
     activas = defaultdict(list)    # (linea, destino) -> pistas
-    pasos, perdidas = [], 0
+    pasos, perdidas = [], Counter()
     anterior_t = None
 
     def cerrar(pista, t_ausente, t_previo):
-        nonlocal perdidas
         ultima = pista["obs"][-1]
-        if ultima["minutos"] <= ULTIMO_MAX_MIN and t_ausente - t_previo <= MAX_HUECO_S:
+        if ultima["minutos"] > ULTIMO_MAX_MIN:
+            perdidas["desaparece lejos de la parada"] += 1
+        elif t_ausente - t_previo > MAX_HUECO_S:
+            perdidas["hueco entre consultas"] += 1
+        else:
             pista["paso"] = (ultima["t"] + t_ausente) / 2
             pasos.append(pista)
-        else:
-            perdidas += 1
 
     for t, llegadas in serie:
         grupos = defaultdict(list)
@@ -108,15 +132,17 @@ def reconstruir(serie):
             siguen = []
             for p, b in pares:
                 p["eta"] = b["llega_a"]
-                p["obs"].append({"t": t, "minutos": b["minutos"], "llega_a": b["llega_a"]})
+                p["obs"].append({"t": t, "minutos": b["minutos"], "llega_a": b["llega_a"],
+                                 "orden": buses.index(b) + 1})
                 siguen.append(p)
             for b in nuevas:
                 siguen.append({"linea": clave[0], "destino": clave[1], "eta": b["llega_a"],
-                               "obs": [{"t": t, "minutos": b["minutos"], "llega_a": b["llega_a"]}]})
+                               "obs": [{"t": t, "minutos": b["minutos"], "llega_a": b["llega_a"],
+                                        "orden": buses.index(b) + 1}]})
             activas[clave] = sorted(siguen, key=lambda p: p["eta"])
         anterior_t = t
     # Las pistas que siguen abiertas al terminar no tienen paso conocido
-    perdidas += sum(len(v) for v in activas.values())
+    perdidas["sin pasar al terminar"] += sum(len(v) for v in activas.values())
     return pasos, perdidas
 
 
@@ -132,11 +158,11 @@ def main():
     for parada, serie in sorted(por_parada.items()):
         pasos, perdidas = reconstruir(serie)
         resumen_paradas.append({"parada": parada, "consultas": len(serie),
-                                "pasos": len(pasos), "descartados": perdidas})
+                                "pasos": len(pasos), **perdidas})
         for p in pasos:
             for o in p["obs"]:
                 filas.append({"parada": parada, "linea": p["linea"], "destino": p["destino"],
-                              "t": o["t"], "minutos": o["minutos"],
+                              "t": o["t"], "minutos": o["minutos"], "orden": o["orden"],
                               "horizonte_min": (p["paso"] - o["t"]) / 60,
                               "desvio_min": (p["paso"] - o["llega_a"]) / 60,
                               "paso": p["paso"]})
@@ -170,6 +196,13 @@ def main():
               .round(2).reset_index().sort_values("estimaciones", ascending=False))
     lineas.to_csv(RESULTADOS / "lineas_5_10min.csv", index=False)
 
+    orden = (df[df.horizonte_min.between(5, 10)].groupby("orden").desvio_min
+             .agg(estimaciones="size", mediana="median",
+                  error_medio=lambda s: s.abs().mean(),
+                  pct_antes=lambda s: 100 * (s <= -1).mean())
+             .round(2).reset_index())
+    orden.to_csv(RESULTADOS / "orden_5_10min.csv", index=False)
+
     pasos = df.drop_duplicates(["parada", "linea", "destino", "paso"])
     print(f"Días: {sorted(set(map(str, df.dia)))}")
     print(f"Respuestas descartadas: {fallos}")
@@ -177,6 +210,8 @@ def main():
     print(f"\nPasos reconstruidos: {len(pasos)} · estimaciones comparadas: {len(df)}")
     print("\nDesvío (paso real − previsto, min) por minutos que faltaban de verdad:")
     print(tabla.to_string(index=False))
+    print("\nPrimer o segundo autobús de la línea en la pantalla, estimaciones a 5-10 min:")
+    print(orden.to_string(index=False))
     print("\nLíneas, estimaciones a 5-10 min:")
     print(lineas.to_string(index=False))
 
