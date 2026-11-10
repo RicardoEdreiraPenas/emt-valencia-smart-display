@@ -5,8 +5,14 @@ name: Medición de precisión
 
 on:
   schedule:
-    # 05:07 UTC = 06:07 en invierno y 07:07 en verano; el script espera a las 07:00
+    # GitHub retrasa u omite a veces las ejecuciones programadas (el 10/11/2026 no
+    # lanzó ninguna), así que hay tres intentos. El primero que arranca espera a las
+    # 07:00 y mide; los siguientes quedan en cola por `concurrency` y, al empezar
+    # después de las 09:30, terminan sin hacer nada.
+    # 04:37, 05:07 y 05:37 UTC = 05:37, 06:07 y 06:37 en invierno (una hora más en verano).
+    - cron: "37 4 * * 1-5"
     - cron: "7 5 * * 1-5"
+    - cron: "37 5 * * 1-5"
   workflow_dispatch:
     inputs:
       desde:
@@ -28,7 +34,7 @@ concurrency:
 jobs:
   registrar:
     runs-on: ubuntu-24.04
-    timeout-minutes: 240
+    timeout-minutes: 300
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
