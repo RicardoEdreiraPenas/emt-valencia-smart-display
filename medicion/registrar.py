@@ -12,6 +12,7 @@ Uso:
     python medicion/registrar.py --desde 07:00 --hasta 09:30 --salida medicion/datos
 """
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 import gzip
 import json
 import time
@@ -79,7 +80,9 @@ def main():
     # lo grabado hasta entonces sigue siendo legible.
     while time.time() < hasta:
         ronda = time.time()
-        filas = [consultar(sesion, p) for p in paradas]
+        # En paralelo: si una parada no responde, no retrasa a las demás.
+        with ThreadPoolExecutor(max_workers=len(paradas)) as pool:
+            filas = list(pool.map(lambda p: consultar(sesion, p), paradas))
         fallos += sum(1 for f in filas if f.get("estado") != 200)
         with gzip.open(destino, "at", encoding="utf-8") as f:
             for fila in filas:
